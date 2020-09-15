@@ -19,13 +19,17 @@ class Server():
         self.conn, self.addr = self.sock.accept()
         return True
 
-    def get_frame(self):
-        
+    def send(msg):
+        self.conn.
 
+    def get_frame(self):
         #try:
             # recieve packed data
             while len(self.data) < self.p_size:
-                self.data += self.conn.recv(buffer_size)
+                buf = self.conn.recv(buffer_size)
+                if len(buf) == 0:
+                    return False
+                self.data += buf
             packed_msg_size = self.data[:self.p_size]
 
             # unpack data
@@ -34,7 +38,10 @@ class Server():
 
             # reciever frame data
             while len(self.data) < msg_size:
-                self.data += self.conn.recv(buffer_size)
+                buf = self.conn.recv(buffer_size)
+                if len(buf) == 0:
+                    return False
+                self.data += buf
             frame_data = self.data[:msg_size]
             self.data = self.data[msg_size:]
 

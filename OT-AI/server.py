@@ -1,8 +1,14 @@
 import streaming
-import asyncio
 import cv2
+import linedetection
+import socketio
 
 server = streaming.Server(('127.0.0.1', 8083))
+
+cv2.namedWindow('frame')
+##cv2.startWindowThread()
+
+steer = 0
 
 while True:
     server.wait_for_connection()
@@ -11,8 +17,16 @@ while True:
     while True:
         frame = server.get_frame()
 
-        if frame:
-            cv2.imshow('frame', frame)
+        if type(frame) == bool:
+            break
+        
+        lanes = linedetection.detect_lane(frame)
+        steer = linedetection.stabilize_steering_angle(linedetection.compute_steering_angle(frame, lanes), steer, len(lanes))
+        frame = linedetection.display_lines(frame, lanes)
+        frame = linedetection.display_heading_line(frame, steer)
+        cv2.imshow('frame', frame)
+        cv2.waitKey(1)
 
     print("client disconnected")
+    cv2.destroyAllWindows()
     
