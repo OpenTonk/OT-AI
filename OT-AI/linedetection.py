@@ -2,19 +2,20 @@ import cv2
 import numpy as np
 import math
 
-lower_blue = np.array([60, 40, 40])
-upper_blue = np.array([150, 255, 255])
+lower_blue = np.array([0, 230, 153])
+upper_blue = np.array([204, 255, 238])
 
 def detect_edges(frame):
     # filter for blue lane lines
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
 
-    cv2.imshow('hsv', mask)
-
+    cv2.imshow('hsv', hsv)
+    cv2.imshow('mask', mask)
 
     # detect edges
     edges = cv2.Canny(mask, 200, 400)
+
 
     return edges
 
@@ -32,6 +33,9 @@ def region_of_interest(edges):
 
     cv2.fillPoly(mask, polygon, 255)
     cropped_edges = cv2.bitwise_and(edges, mask)
+
+    cv2.imshow('edges', cropped_edges)
+
     return cropped_edges
 
 def detect_line_segments(cropped_edges):
