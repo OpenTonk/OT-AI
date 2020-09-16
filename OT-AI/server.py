@@ -24,7 +24,7 @@ while True:
         frame = linedetection.display_lines(frame, lanes)
         frame = linedetection.display_heading_line(frame, steer)
         cv2.imshow('frame', frame)
-        cv2.waitKey(10)
+        cv2.waitKey(1)
 
     print("client disconnected")
     cv2.destroyAllWindows()
