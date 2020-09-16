@@ -5,11 +5,13 @@ import sys
 import pickle
 import struct
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('video.mp4')
 clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-clientsocket.connect(('127.0.0.1', 8083))
+clientsocket.connect(('127.0.0.1', 8084))
 
 while True:
     ret,frame = cap.read()
-    data = pickle.dumps(frame)
-    clientsocket.sendall(struct.pack("L", len(data)) + data)
+    if ret:
+        data = pickle.dumps(frame)
+        clientsocket.sendall(struct.pack("L", len(data)) + data)
+    

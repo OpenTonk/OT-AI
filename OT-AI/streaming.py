@@ -19,9 +19,6 @@ class Server():
         self.conn, self.addr = self.sock.accept()
         return True
 
-    def send(msg):
-        self.conn.
-
     def get_frame(self):
         #try:
             # recieve packed data

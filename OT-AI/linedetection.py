@@ -10,6 +10,9 @@ def detect_edges(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
 
+    cv2.imshow('hsv', mask)
+
+
     # detect edges
     edges = cv2.Canny(mask, 200, 400)
 

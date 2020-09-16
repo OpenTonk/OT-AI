@@ -1,9 +1,8 @@
 import streaming
 import cv2
 import linedetection
-import socketio
 
-server = streaming.Server(('127.0.0.1', 8083))
+server = streaming.Server(('127.0.0.1', 8084))
 
 cv2.namedWindow('frame')
 ##cv2.startWindowThread()
@@ -25,7 +24,7 @@ while True:
         frame = linedetection.display_lines(frame, lanes)
         frame = linedetection.display_heading_line(frame, steer)
         cv2.imshow('frame', frame)
-        cv2.waitKey(1)
+        cv2.waitKey(10)
 
     print("client disconnected")
     cv2.destroyAllWindows()
