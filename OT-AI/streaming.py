@@ -20,35 +20,31 @@ class Server():
         return True
 
     def get_frame(self):
-        #try:
-            # recieve packed data
-            while len(self.data) < self.p_size:
-                buf = self.conn.recv(buffer_size)
-                if len(buf) == 0:
-                    return False
-                self.data += buf
-            packed_msg_size = self.data[:self.p_size]
+        while len(self.data) < self.p_size:
+            buf = self.conn.recv(buffer_size)
+            if len(buf) == 0:
+                return False
+            self.data += buf
+        packed_msg_size = self.data[:self.p_size]
 
-            # unpack data
-            self.data = self.data[self.p_size:]
-            msg_size = struct.unpack("L", packed_msg_size)[0]
+        # unpack data
+        self.data = self.data[self.p_size:]
+        msg_size = struct.unpack("L", packed_msg_size)[0]
 
-            # reciever frame data
-            while len(self.data) < msg_size:
-                buf = self.conn.recv(buffer_size)
-                if len(buf) == 0:
-                    return False
-                self.data += buf
-            frame_data = self.data[:msg_size]
-            self.data = self.data[msg_size:]
+        # reciever frame data
+        while len(self.data) < msg_size:
+            buf = self.conn.recv(buffer_size)
+            if len(buf) == 0:
+                return False
+            self.data += buf
+        frame_data = self.data[:msg_size]
+        self.data = self.data[msg_size:]
 
-            # convert to cv2 frame
-            frame = pickle.loads(frame_data)
-            # print(frame.size)
+        # convert to cv2 frame
+        frame = pickle.loads(frame_data)
+        # print(frame.size)
 
-            return frame
-        #except:
-        #    return False
+        return frame
 
 
 
