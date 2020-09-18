@@ -9,7 +9,7 @@ def detect_edges(frame):
     # filter for blue lane lines
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
-
+    #mask = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('hsv', hsv)
     cv2.imshow('mask', mask)
 

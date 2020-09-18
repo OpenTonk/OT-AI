@@ -2,10 +2,10 @@ import streaming
 import cv2
 import linedetection
 
-server = streaming.Server(('127.0.0.1', 8084))
+server = streaming.Server(('192.168.111.106', 8084))
 
 cv2.namedWindow('frame')
-##cv2.startWindowThread()
+cv2.startWindowThread()
 
 steer = 0
 
@@ -27,5 +27,5 @@ while True:
         cv2.waitKey(1)
 
     print("client disconnected")
-    cv2.destroyAllWindows()
+    #cv2.destroyAllWindows()
     
