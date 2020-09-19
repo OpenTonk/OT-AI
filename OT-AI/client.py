@@ -1,12 +1,13 @@
 import cv2
-import numpy as np
-import socket
-import sys
-import pickle
-import struct
+import asyncio
+from streaming import AsyncClient
 
 #cap = cv2.VideoCapture('video.mp4')
 cap = cv2.VideoCapture(0)
+client = AsyncClient('127.0.0.1', 8084)
+size = 1
+
+"""
 clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientsocket.connect(('127.0.0.1', 8084))
 
@@ -15,8 +16,18 @@ while True:
     
     if ret:
         h, w, _ = frame.shape
-        frame = cv2.resize(frame, (int(w / 2), int(h / 2)))
+        frame = cv2.resize(frame, (int(w / size), int(h / size)))
         data = pickle.dumps(frame)
         clientsocket.sendall(struct.pack("L", len(data)) + data)
-        cv2.waitKey(1)
-    
+        #cv2.waitKey(1)
+"""
+
+@client.on_get_frame()
+def read_frame():
+    ret, frame = cap.read()
+    if ret:
+        h, w, _ = frame.shape
+        frame = cv2.resize(frame, (int(w / size), int(h / size)))
+        return frame
+
+asyncio.run(client.connect())

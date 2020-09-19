@@ -4,6 +4,7 @@ import math
 
 lower_blue = np.array([0, 230, 153])
 upper_blue = np.array([204, 255, 238])
+lastSteerAngle = 0
 
 def detect_edges(frame):
     # filter for blue lane lines
@@ -127,6 +128,7 @@ def compute_steering_angle(frame, lane_lines):
     angle_to_mid_deg = int(angle_to_mid_radian * 180.0 / math.pi)  # angle (in degrees) to center vertical line
     steering_angle = angle_to_mid_deg + 90  # this is the steering angle needed by picar front wheel
 
+    lastSteerAngle = steering_angle
     return steering_angle
 
 
