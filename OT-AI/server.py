@@ -3,33 +3,35 @@ import cv2
 import linedetection
 from streaming import AsyncServer
 import asyncio
+from tankcontrol import TankControl
+import json
 
-cv2.namedWindow('frame')
+#cv2.namedWindow('frame')
 cv2.startWindowThread()
 
 writer = None
 
-server = AsyncServer('127.0.0.1', 8084)
-
+server = AsyncServer('192.168.111.106', 8084)
+controller = TankControl((1, 1), (2, 2))
 
 @server.on_frame()
-async def frame_handler(frame):
+async def frame_handler(frame, writer):
     lanes = linedetection.detect_lane(frame)
     steer = linedetection.stabilize_steering_angle(linedetection.compute_steering_angle(
         frame, lanes), linedetection.lastSteerAngle, len(lanes))
+    controller.drive(50, steer)
     frame = linedetection.display_lines(frame, lanes)
     frame = linedetection.display_heading_line(frame, steer)
 
-    try:
-        writer.write(frame)
-    except:
-        (h, w) = frame.shape[:2]
-        writer = cv2.VideoWriter(
-            './output.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (w, h), True)
+    d = {
+        "speed": 40,
+        "angle": steer
+    }
+    server.send_msg(writer, json.dumps(d))
+    await writer.drain()
 
     cv2.imshow('frame', frame)
     cv2.waitKey(1)
-    writer.release()
 
 
 asyncio.run(server.serve())

@@ -108,7 +108,7 @@ def compute_steering_angle(frame, lane_lines):
         We assume that camera is calibrated to point to dead center
     """
     if len(lane_lines) == 0:
-        return -90
+        return 90
 
     height, width, _ = frame.shape
     if len(lane_lines) == 1:

@@ -51,7 +51,7 @@ class Server():
 
 
 class AsyncServer:
-    def __init__(self, host, port):
+    def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
         self.on_frame_array = []
@@ -64,6 +64,9 @@ class AsyncServer:
         self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
         print("starting streamserver...")
         await self.sock.serve_forever()
+
+    def send_msg(self, writer: asyncio.StreamWriter, msg: str):
+        writer.write(msg.encode('utf8'))
 
     async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         peername = writer.get_extra_info('peername')
@@ -109,15 +112,15 @@ class AsyncServer:
             frame = pickle.loads(frame_data)
             startTime = datetime.now()
             self.lastFrame = frame
-            self.call_on_frame(frame)
+            self.call_on_frame(frame, writer)
 
         print("Peer disconnected", peername)
         cv2.destroyAllWindows()
 
-    def call_on_frame(self, frame):
+    def call_on_frame(self, frame: np.ndarray, writer: asyncio.StreamWriter):
         arr = []
         for f in self.on_frame_array:
-            arr.append(f(frame))
+            arr.append(f(frame, writer))
         asyncio.gather(*arr)
 
     def on_frame(self):
@@ -132,10 +135,10 @@ class AsyncClient:
         self.host = host
         self.port = port
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.on_msg_functions = []
 
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
-        #self.clientsocket.connect((self.host, self.port))
         await self.client_handler()
 
     async def client_handler(self):
@@ -144,16 +147,27 @@ class AsyncClient:
             data = pickle.dumps(frame)
             self.writer.write(struct.pack("L", len(data)) + data)
             await self.writer.drain()
-            #self.clientsocket.sendall(struct.pack("L", len(data)) + data)
+        
+            msg = (await self.reader.read(100)).decode('utf8')
+            if len(msg) > 1:
+                for f in self.on_msg_functions:
+                    f(msg)
+
 
     def close(self):
         self.writer.close()
 
-    def get_frame(self):
+    def get_frame(self) -> np.ndarray:
         return self.get_frame_func()
 
     def on_get_frame(self):
         def decorator(f):
             self.get_frame_func = f
+            return f
+        return decorator
+
+    def on_msg(self):
+        def decorator(f):
+            self.on_msg_functions.append(f)
             return f
         return decorator
