@@ -5,7 +5,7 @@ import comms
 import threading
 
 # cap = cv2.VideoCapture('video.mp4')
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(-1)
 client = AsyncClient('192.168.111.106', 8084)
 size = 1
 
