@@ -5,6 +5,7 @@ import comms
 import threading
 from picamera.array import PiRGBArray
 from picamera import PiCamera
+import time
 
 isPi = True
 
@@ -22,6 +23,8 @@ client = AsyncClient('192.168.111.106', 8084)
 size = 1
 
 comms = comms.AsyncClient('192.168.111.106', 8085)
+
+time.sleep(0.1)
 
 
 @client.on_get_frame()
