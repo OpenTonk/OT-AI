@@ -7,7 +7,7 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
 
-isPi = True
+isPi = False
 
 # cap = cv2.VideoCapture('video.mp4')
 if isPi:
