@@ -3,9 +3,21 @@ import asyncio
 from streaming import AsyncClient
 import comms
 import threading
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+
+isPi = True
 
 # cap = cv2.VideoCapture('video.mp4')
-cap = cv2.VideoCapture(-1)
+if isPi:
+    cam = PiCamera()
+    cam.resolution = (640, 480)
+    cam.framerate = 30
+    rawCapture = PiRGBArray(cam, size=(640, 480))
+
+else:
+    cap = cv2.VideoCapture(-1)
+
 client = AsyncClient('192.168.111.106', 8084)
 size = 1
 
@@ -14,7 +26,13 @@ comms = comms.AsyncClient('192.168.111.106', 8085)
 
 @client.on_get_frame()
 def read_frame():
-    ret, frame = cap.read()
+    if isPi:
+        ret = True
+        cam.capture(rawCapture, format="bgr")
+        frame = rawCapture.array
+    else:
+        ret, frame = cap.read()
+
     if ret:
         h, w, _ = frame.shape
         frame = cv2.resize(frame, (int(w / size), int(h / size)))
