@@ -11,10 +11,9 @@ import threading
 #cv2.namedWindow('frame')
 cv2.startWindowThread()
 
-writer = None
+saveTrainingData = False
 
 server = AsyncServer('127.0.0.1', 8084)
-controller = TankControl((1, 1), (2, 2))
 
 comms = comms.AsyncServer('127.0.0.1', 8085)
 
@@ -26,7 +25,12 @@ async def frame_handler(frame, writer):
 
     await comms.send_msg(json.dumps({"angle": steer}))
 
-    controller.drive(50, steer)
+    if saveTrainingData:
+        path = "images/%05d_%03d.png" % (server.frameNum, steer)
+        print(path)
+        result = cv2.imwrite(path, frame)
+        print(result)
+
     frame = linedetection.display_lines(frame, lanes)
     frame = linedetection.display_heading_line(frame, steer)
 

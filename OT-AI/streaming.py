@@ -59,6 +59,7 @@ class AsyncServer:
         self.package_size = struct.calcsize('L')
         self.data = b''
         self.lastFrame = None
+        self.frameNum = 0
 
     async def serve(self):
         self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
@@ -74,6 +75,8 @@ class AsyncServer:
 
         startTime = datetime.now()
         dt = datetime.now() - startTime
+        
+        self.frameNum = 0
 
         while (datetime.now() - startTime).total_seconds() < 0.2:
             buf = []
@@ -118,6 +121,7 @@ class AsyncServer:
         cv2.destroyAllWindows()
 
     def call_on_frame(self, frame: np.ndarray, writer: asyncio.StreamWriter):
+        self.frameNum += 1
         arr = []
         for f in self.on_frame_array:
             arr.append(f(frame, writer))
