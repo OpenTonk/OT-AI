@@ -13,9 +13,9 @@ cv2.startWindowThread()
 
 saveTrainingData = False
 
-server = AsyncServer('127.0.0.1', 8084)
+server = AsyncServer('192.168.111.106', 8084)
 
-comms = comms.AsyncServer('127.0.0.1', 8085)
+comms = comms.AsyncServer('192.168.111.106', 8085)
 
 @server.on_frame()
 async def frame_handler(frame, writer):

@@ -6,10 +6,10 @@ import threading
 
 # cap = cv2.VideoCapture('video.mp4')
 cap = cv2.VideoCapture(0)
-client = AsyncClient('127.0.0.1', 8084)
-size = 3
+client = AsyncClient('192.168.111.106', 8084)
+size = 1
 
-comms = comms.AsyncClient('127.0.0.1', 8085)
+comms = comms.AsyncClient('192.168.111.106', 8085)
 
 
 @client.on_get_frame()
