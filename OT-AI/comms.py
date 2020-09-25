@@ -10,28 +10,28 @@ class AsyncServer:
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
-        self.on_frame_array = []
+        self.on_msg_listeners = []
 
         self.package_size = struct.calcsize('L')
         self.data = b''
-        self.lastFrame = None
 
     async def serve(self):
         self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
-        print("starting stream server...")
+        print("starting comms server...")
         await self.sock.serve_forever()
 
-    def send_msg(self, writer: asyncio.StreamWriter, msg: str):
-        writer.write(msg.encode('utf8'))
+    async def send_msg(self, msg):
+        data = pickle.dumps(msg)
+        self.writer.write(struct.pack("L", len(data)) + data)
+        await self.writer.drain()
 
     async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         peername = writer.get_extra_info('peername')
         print("Peer connected", peername)
 
-        startTime = datetime.now()
-        dt = datetime.now() - startTime
+        self.writer = writer
 
-        while (datetime.now() - startTime).total_seconds() < 0.2:
+        while True:
             buf = []
             skip = False
             while(len(self.data) < self.package_size):
@@ -62,26 +62,23 @@ class AsyncServer:
             if skip:
                 continue
 
-            frame_data = self.data[:msg_size]
+            msg_data = self.data[:msg_size]
             self.data = self.data[msg_size:]
 
-            frame = pickle.loads(frame_data)
-            startTime = datetime.now()
-            self.lastFrame = frame
-            self.call_on_frame(frame, writer)
+            msg = pickle.loads(msg_data)
+            self.call_on_msg(msg)
 
         print("Peer disconnected", peername)
-        cv2.destroyAllWindows()
 
-    def call_on_frame(self, frame: np.ndarray, writer: asyncio.StreamWriter):
+    def call_on_msg(self, msg):
         arr = []
-        for f in self.on_frame_array:
-            arr.append(f(frame, writer))
+        for f in self.on_msg_listeners:
+            arr.append(f(msg))
         asyncio.gather(*arr)
 
-    def on_frame(self):
+    def on_msg(self):
         def decorator(f):
-            self.on_frame_array.append(f)
+            self.on_msg_listeners.append(f)
             return f
         return decorator
 
@@ -93,6 +90,8 @@ class AsyncClient:
         self.port = port
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.on_msg_listeners = []
+
+        self.package_size = struct.calcsize('L')
         self.data = b''
 
     async def connect(self):
