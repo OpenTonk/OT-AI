@@ -23,13 +23,6 @@ async def frame_handler(frame, writer):
     frame = linedetection.display_lines(frame, lanes)
     frame = linedetection.display_heading_line(frame, steer)
 
-    d = {
-        "speed": 40,
-        "angle": steer
-    }
-    server.send_msg(writer, json.dumps(d))
-    await writer.drain()
-
     cv2.imshow('frame', frame)
     cv2.waitKey(1)
 

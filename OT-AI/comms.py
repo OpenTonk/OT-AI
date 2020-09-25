@@ -1,53 +1,9 @@
 import socket
 import asyncio
 import struct
-import cv2
 import pickle
-import numpy as np
-from datetime import datetime
 
 buffer_size = 4096
-
-
-class Server():
-    def __init__(self, addr):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.bind(addr)
-        self.sock.listen(10)
-
-        self.data = b''
-        self.p_size = struct.calcsize('L')
-
-    def wait_for_connection(self):
-        self.conn, self.addr = self.sock.accept()
-        return True
-
-    def get_frame(self):
-        while len(self.data) < self.p_size:
-            buf = self.conn.recv(buffer_size)
-            if len(buf) == 0:
-                return False
-            self.data += buf
-        packed_msg_size = self.data[:self.p_size]
-
-        # unpack data
-        self.data = self.data[self.p_size:]
-        msg_size = struct.unpack("L", packed_msg_size)[0]
-
-        # reciever frame data
-        while len(self.data) < msg_size:
-            buf = self.conn.recv(buffer_size)
-            if len(buf) == 0:
-                return False
-            self.data += buf
-        frame_data = self.data[:msg_size]
-        self.data = self.data[msg_size:]
-
-        # convert to cv2 frame
-        frame = pickle.loads(frame_data)
-        # print(frame.size)
-
-        return frame
 
 
 class AsyncServer:
@@ -130,33 +86,72 @@ class AsyncServer:
         return decorator
 
 
+
 class AsyncClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.on_msg_functions = []
+        self.on_msg_listeners = []
+        self.data = b''
 
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
-        print("starting stream client...")
+        print("starting comms client...")
         await self.client_handler()
+
+    async def send_msg(self, msg):
+        data = pickle.dumps(msg)
+        self.writer.write(struct.pack("L", len(data)) + data)
+        await self.writer.drain()
 
     async def client_handler(self):
         while True:
-            frame = self.get_frame()
-            data = pickle.dumps(frame)
-            self.writer.write(struct.pack("L", len(data)) + data)
-            await self.writer.drain()
+            buf = []
+            skip = False
+            while(len(self.data) < self.package_size):
+                buf = await self.reader.read(buffer_size)
+                if len(buf) == 0:
+                    skip = True
+                    break
+                self.data += buf
+
+            # if no frame data then skip
+            if skip:
+                continue
+            packed_msg_size = self.data[:self.package_size]
+
+            # unpack data
+            self.data = self.data[self.package_size:]
+            msg_size = struct.unpack("L", packed_msg_size)[0]
+
+            # recieve frame data
+            while(len(self.data) < msg_size):
+                buf = await self.reader.read(buffer_size)
+                if len(buf) == 0:
+                    skip = True
+                    break
+                self.data += buf
+
+            # no frame data then skip
+            if skip:
+                continue
+
+            msg = self.data[:msg_size]
+            self.data = self.data[msg_size:]
+            self.call_on_msg(pickle.loads(msg))
 
     def close(self):
         self.writer.close()
 
-    def get_frame(self) -> np.ndarray:
-        return self.get_frame_func()
+    def call_on_msg(self, msg):
+        arr = []
+        for f in self.on_msg_listeners:
+            arr.append(f(msg))
+        asyncio.gather(*arr)
 
-    def on_get_frame(self):
+    def on_msg(self):
         def decorator(f):
-            self.get_frame_func = f
+            self.on_msg_listeners.append(f)
             return f
         return decorator

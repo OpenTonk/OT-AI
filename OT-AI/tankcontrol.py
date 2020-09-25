@@ -7,7 +7,6 @@ class TankControl:
         self.leftSpeed = 0
 
     def drive(self, speed: int, angle: int):
-        print(speed, angle)
         if angle > 90:
             self.setRightSpeed((1 - ((angle - 90) / 90)) * speed)
             self.setLeftSpeed((speed))
