@@ -11,9 +11,9 @@ isPi = True
 # cap = cv2.VideoCapture('video.mp4')
 if isPi:
     cam = PiCamera()
-    cam.resolution = (640, 480)
-    cam.framerate = 30
-    rawCapture = PiRGBArray(cam, size=(640, 480))
+    #cam.resolution = (640, 480)
+    #cam.framerate = 30
+    rawCapture = PiRGBArray(cam)
 
 else:
     cap = cv2.VideoCapture(-1)
