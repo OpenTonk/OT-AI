@@ -5,6 +5,7 @@ import cv2
 import pickle
 import numpy as np
 from datetime import datetime
+import threading
 
 try:
     from picamera.array import PiRGBArray
@@ -85,6 +86,7 @@ class AsyncServer:
             buf = []
             skip = False
             while(len(self.data) < self.package_size):
+                print("phase 1", len(buf))
                 buf = await reader.read(buffer_size)
                 if len(buf) == 0:
                     skip = True
@@ -93,6 +95,7 @@ class AsyncServer:
 
             # if no frame data then skip
             if skip:
+                print("skipped 1")
                 continue
             packed_msg_size = self.data[:self.package_size]
 
@@ -103,6 +106,8 @@ class AsyncServer:
             # recieve frame data
             while(len(self.data) < msg_size):
                 buf = await reader.read(buffer_size)
+                print("phase 2", len(buf))
+
                 if len(buf) == 0:
                     skip = True
                     break
@@ -110,6 +115,7 @@ class AsyncServer:
 
             # no frame data then skip
             if skip:
+                print("skipped 2")
                 continue
 
             frame_data = self.data[:msg_size]
@@ -155,22 +161,14 @@ class AsyncClient:
 
     async def client_handler(self):
         if self.usePiCam:
-            cam = PiCamera()
-            cam.resolution = (640, 480)
-            cam.framerate = 30
-            rawCapture = PiRGBArray(cam, size=(640, 480))
-            
-            for pframe in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-                img = pframe.array
-                h, w, _ = img.shape
-                img = cv2.resize(img, (int(w / 1), int(h / 1)))
-                await self.send_frame(img)
-                rawCapture.truncate(0)
-                rawCapture.seek(0)
-        else:
-            while True:
+            self.cam = picam()
+
+        while True:
+            if self.usePiCam:
+                frame = self.cam.read()
+            else:
                 frame = self.get_frame()
-                await self.send_frame(frame)
+            await self.send_frame(frame)
         
         print("client handler stopped")
 
@@ -179,7 +177,6 @@ class AsyncClient:
         self.writer.write(struct.pack("L", len(data)) + data)
         await self.writer.drain()
         print('sended %dx%d image' % (frame.shape[1], frame.shape[0]))
-
 
     def close(self):
         self.writer.close()
@@ -192,3 +189,29 @@ class AsyncClient:
             self.get_frame_func = f
             return f
         return decorator
+
+
+class picam:
+    def __init__(self):
+        self.frame = []
+        self.isNew = False
+
+        self.thread = threading.Thread(target=self.loop)
+        self.thread.start()
+
+    def read(self):
+        while not self.isNew:
+            pass
+        return self.frame
+
+    def loop(self):
+        c = PiCamera()
+        c.resolution = (640, 480)
+        c.framerate = 32
+        raw = PiRGBArray(c, size=(640, 480))
+
+        while True:
+            self.isNew = False
+            frame = c.capture(raw, format="bgr", use_video_port=True)
+            self.frame = frame.array
+            self.isNew = True
