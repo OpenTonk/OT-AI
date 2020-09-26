@@ -166,6 +166,7 @@ class AsyncClient:
         while True:
             if self.usePiCam:
                 frame = cam.read()
+                await asyncio.sleep(0.04)
             else:
                 frame = self.get_frame()
             await self.send_frame(frame)
@@ -207,7 +208,7 @@ class picam:
     def loop(self):
         c = PiCamera()
         c.resolution = (640, 480)
-        c.framerate = 32
+        c.framerate = 25
         raw = PiRGBArray(c)
 
         while True:
