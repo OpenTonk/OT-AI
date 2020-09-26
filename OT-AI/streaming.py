@@ -161,11 +161,11 @@ class AsyncClient:
 
     async def client_handler(self):
         if self.usePiCam:
-            self.cam = picam()
+            cam = picam()
 
         while True:
             if self.usePiCam:
-                frame = self.cam.read()
+                frame = cam.read()
             else:
                 frame = self.get_frame()
             await self.send_frame(frame)
@@ -212,6 +212,6 @@ class picam:
 
         while True:
             self.isNew = False
-            frame = c.capture(raw, format="bgr", use_video_port=True)
-            self.frame = frame.array
+            c.capture(raw, format="bgr", use_video_port=True)
+            self.frame = raw.array
             self.isNew = True
