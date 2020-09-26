@@ -74,7 +74,7 @@ class AsyncServer:
 
     async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         peername = writer.get_extra_info('peername')
-        print("Peer connected", peername)
+        print("Stream connected", peername)
 
         startTime = datetime.now()
         dt = datetime.now() - startTime
@@ -159,10 +159,9 @@ class AsyncClient:
             cam.resolution = (640, 480)
             cam.framerate = 30
             rawCapture = PiRGBArray(cam, size=(640, 480))
-            await asyncio.sleep(0.1)
             
-            for frame in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-                img = frame.array
+            for pframe in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                img = pframe.array
                 h, w, _ = img.shape
                 img = cv2.resize(img, (int(w / 1), int(h / 1)))
                 print('Captured %dx%d image' % (img.shape[1], img.shape[0]))
