@@ -151,6 +151,8 @@ class AsyncClient:
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         print("starting stream client...")
+        if self.usePiCam:
+            print("stream client will use picamera")
         await self.client_handler()
 
     async def client_handler(self):
