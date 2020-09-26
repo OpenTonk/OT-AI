@@ -72,9 +72,6 @@ class AsyncServer:
         print("starting stream server...")
         await self.sock.serve_forever()
 
-    def send_msg(self, writer: asyncio.StreamWriter, msg: str):
-        writer.write(msg.encode('utf8'))
-
     async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         peername = writer.get_extra_info('peername')
         print("Peer connected", peername)
@@ -126,8 +123,9 @@ class AsyncServer:
         print("Peer disconnected", peername)
         cv2.destroyAllWindows()
 
-    def call_on_frame(self, frame: np.ndarray, writer: asyncio.StreamWriter):
+    def call_on_frame(self, frame, writer: asyncio.StreamWriter):
         self.frameNum += 1
+        print('recieved %dx%d image' % (frame.shape[1], frame.shape[0]))
         arr = []
         for f in self.on_frame_array:
             arr.append(f(frame, writer))
