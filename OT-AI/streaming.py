@@ -164,6 +164,7 @@ class AsyncClient:
             for frame in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
                 img = frame.array
                 await self.send_frame(img)
+                rawCapture.truncate(0)
         else:
             while True:
                 frame = self.get_frame()
