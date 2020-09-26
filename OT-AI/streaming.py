@@ -6,6 +6,12 @@ import pickle
 import numpy as np
 from datetime import datetime
 
+try:
+    from picamera.array import PiRGBArray
+    from picamera import PiCamera
+except:
+    pass
+
 buffer_size = 4096
 
 
@@ -135,11 +141,12 @@ class AsyncServer:
 
 
 class AsyncClient:
-    def __init__(self, host, port):
+    def __init__(self, host, port, usePiCam=False):
         self.host = host
         self.port = port
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.on_msg_functions = []
+        self.usePiCam = usePiCam
 
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
@@ -147,11 +154,25 @@ class AsyncClient:
         await self.client_handler()
 
     async def client_handler(self):
-        while True:
-            frame = self.get_frame()
-            data = pickle.dumps(frame)
-            self.writer.write(struct.pack("L", len(data)) + data)
-            await self.writer.drain()
+        if self.usePiCam:
+            cam = PiCamera()
+            cam.resolution = (640, 480)
+            cam.framerate = 30
+            rawCapture = PiRGBArray(cam, size=(640, 480))
+            await asyncio.sleep(0.1)
+            
+            for frame in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                img = frame.array
+                await self.send_frame(img)
+        else:
+            while True:
+                frame = self.get_frame()
+                await self.send_frame(frame)
+
+    async def send_frame(self, frame):
+        data = pickle.dumps(frame)
+        self.writer.write(struct.pack("L", len(data)) + data)
+        await self.writer.drain()
 
     def close(self):
         self.writer.close()
