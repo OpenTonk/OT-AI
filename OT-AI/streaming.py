@@ -164,7 +164,6 @@ class AsyncClient:
                 img = pframe.array
                 h, w, _ = img.shape
                 img = cv2.resize(img, (int(w / 1), int(h / 1)))
-                print('Captured %dx%d image' % (img.shape[1], img.shape[0]))
                 await self.send_frame(img)
                 rawCapture.truncate(0)
                 rawCapture.seek(0)
@@ -179,6 +178,8 @@ class AsyncClient:
         data = pickle.dumps(frame)
         self.writer.write(struct.pack("L", len(data)) + data)
         await self.writer.drain()
+        print('sended %dx%d image' % (frame.shape[1], frame.shape[0]))
+
 
     def close(self):
         self.writer.close()
