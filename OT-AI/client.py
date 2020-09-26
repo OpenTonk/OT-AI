@@ -15,20 +15,20 @@ size = 1
 try:
     opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", ["ip=", "port=", "size=", "usepicam"])
 except getopt.GetoptError:
-    print("client.py -a <server ip> -p <port> -s <size> (-usepicam)")
+    print("ERROR: client.py -a <server ip> -p <port> -s <size> (--usepicam)")
     exit()
 
 for opt, arg in opts:
     if opt == '-h':
-        print("client.py -a <server ip> -p <port> -s <size> (-usepicam)")
+        print("client.py -a <server ip> -p <port> -s <size> (--usepicam)")
         exit()
-    elif opt in ("-a", "-ip"):
+    elif opt in ("-a", "--ip"):
         ip = arg
-    elif opt in ("-p", "-port"):
+    elif opt in ("-p", "--port"):
         port = int(arg)
-    elif opt in ("-s", "-size"):
+    elif opt in ("-s", "--size"):
         size = int(arg)
-    elif opt == '-usepicam':
+    elif opt == '--usepicam':
         usePiCam = True
 
 
