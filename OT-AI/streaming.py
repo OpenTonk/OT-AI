@@ -200,6 +200,8 @@ class picam:
         self.thread.start()
 
     def read(self):
+        while len(self.frame) == 0:
+            pass
         return self.frame
 
     def loop(self):
