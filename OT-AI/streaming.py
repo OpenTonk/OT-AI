@@ -171,6 +171,8 @@ class AsyncClient:
             while True:
                 frame = self.get_frame()
                 await self.send_frame(frame)
+        
+        print("client handler stopped")
 
     async def send_frame(self, frame):
         data = pickle.dumps(frame)
