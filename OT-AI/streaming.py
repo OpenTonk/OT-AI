@@ -208,9 +208,10 @@ class picam:
         c = PiCamera()
         c.resolution = (640, 480)
         c.framerate = 32
-        raw = PiRGBArray(c, size=(640, 480))
+        raw = PiRGBArray(c)
 
         while True:
+            raw.truncate(0)
             self.isNew = False
             c.capture(raw, format="bgr", use_video_port=True)
             self.frame = raw.array
