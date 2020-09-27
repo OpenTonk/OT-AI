@@ -64,7 +64,9 @@ class AsyncServer:
         self.port = port
         self.on_frame_array = []
 
-        self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if usePiCam:
+            self.socket = socket.socket()
 
         self.lastFrame = None
         self.frameNum = 0
@@ -188,6 +190,9 @@ class AsyncClient:
         self.port = port
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if usePiCam:
+            self.socket = socket.socket()
+
 
         self.on_msg_functions = []
         self.usePiCam = usePiCam
