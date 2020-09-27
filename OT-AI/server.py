@@ -8,14 +8,41 @@ import json
 import comms
 import threading
 
+import sys, getopt
+
+
+ip = "127.0.0.1"
+port = 8084
+usePiCam = False
+saveTrainingData = False
+
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", ["ip=", "port=", "size=", "usepicam"])
+except getopt.GetoptError:
+    print("ERROR: server.py -a <server ip> -p <port> -s <size> (--usepicam)")
+    exit()
+
+for opt, arg in opts:
+    if opt == '-h':
+        print("server.py -a <server ip> -p <port> -s <size> (--usepicam --save)")
+        exit()
+    elif opt in ("-a", "--ip"):
+        ip = arg
+    elif opt in ("-p", "--port"):
+        port = int(arg)
+    elif opt == '--usepicam':
+        usePiCam = True
+    elif opt == '--save':
+        saveTrainingData = True
+
+
 #cv2.namedWindow('frame')
 cv2.startWindowThread()
 
-saveTrainingData = False
+server = AsyncServer(ip, port, usePiCam)
 
-server = AsyncServer('192.168.111.106', 8084)
-
-comms = comms.AsyncServer('192.168.111.106', 8085)
+comms = comms.AsyncServer(ip, port + 1)
 
 @server.on_frame()
 async def frame_handler(frame, writer):
