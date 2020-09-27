@@ -78,11 +78,10 @@ class AsyncServer:
             print("stream server expects to recieve picam images")
         await self.sock.serve_forever()
 
-    async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    async def server_handler(self, reader: asyncio.StreamReader, writer):
         peername = writer.get_extra_info('peername')
         print("Stream connected", peername)
-
-        s = writer.get_extra_info('socket')
+        self.writer = writer
 
         startTime = datetime.now()
         dt = datetime.now() - startTime
@@ -90,7 +89,7 @@ class AsyncServer:
         self.frameNum = 0
 
         if self.usePiCam:
-            #s.makefile("rb")
+            #self.writer.get_extra_info('socket').makefile("rb")
 
             while (datetime.now() - startTime).total_seconds() < 0.2:
                 # get length of image
