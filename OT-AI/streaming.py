@@ -64,109 +64,116 @@ class AsyncServer:
         self.port = port
         self.on_frame_array = []
 
-        self.package_size = struct.calcsize('L')
-        self.data = b''
+        self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
         self.lastFrame = None
         self.frameNum = 0
 
         self.usePiCam = usePiCam
 
     async def serve(self):
-        self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
-        print("starting stream server...")
-        if self.usePiCam:
-            print("stream server expects to recieve picam images")
-        await self.sock.serve_forever()
-
-    async def server_handler(self, reader: asyncio.StreamReader, writer):
-        peername = writer.get_extra_info('peername')
-        print("Stream connected", peername)
-        self.writer = writer
-
-        startTime = datetime.now()
-        dt = datetime.now() - startTime
+        #self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
         
-        self.frameNum = 0
+        print("starting stream server...")
+        self.socket.bind((self.host, self.port))
 
         if self.usePiCam:
-            #self.writer.get_extra_info('socket').makefile("rb")
+            self.socket.makefile('rb')
+            print("stream server expects to recieve picam images")
+        
+        self.socket.listen(0)
+        await self.server_handler()
 
-            while (datetime.now() - startTime).total_seconds() < 0.2:
-                # get length of image
-                img_len = struct.unpack('<L', await reader.read(self.package_size))[0]
-                if not img_len:
-                    continue
+    async def server_handler(self):
+        while True:
+            conn, info = self.socket.accept()
 
-                # stream to hold image data
-                img_stream = io.BytesIO()
-                img_stream.write(await reader.read(img_len))
+            print("Stream client connected", conn.getpeername())
 
-                # reset stream
-                img_stream.seek(0)
+            startTime = datetime.now()
 
-                # get frame data
-                data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
-                # decode data
-                frame = cv2.imdecode(data, 1)
+            self.frameNum = 0
 
-                startTime = datetime.now()
-                self.lastFrame = frame
-                self.call_on_frame(frame, writer)
-        else:
-            while (datetime.now() - startTime).total_seconds() < 0.2:
-                buf = []
-                skip = False
-                while(len(self.data) < self.package_size):
-                    print("phase 1", len(buf))
-                    buf = await reader.read(buffer_size)
-                    if len(buf) == 0:
-                        skip = True
+            if self.usePiCam:
+                conn = conn.makefile('rb')
+                package_size = struct.calcsize('<L')
+
+                while (datetime.now() - startTime).total_seconds() < 0.2:
+                    img_len = struct.unpack('<L', conn.read(package_size))[0]
+                    
+                    # disconnect when img length is 0
+                    if not img_len:
                         break
-                    self.data += buf
 
-                # if no frame data then skip
-                if skip:
-                    print("skipped 1")
-                    continue
-                packed_msg_size = self.data[:self.package_size]
+                    # img stream to store img
+                    img_stream = io.BytesIO()
+                    img_stream.write(conn.read(img_len))
 
-                # unpack data
-                self.data = self.data[self.package_size:]
-                msg_size = struct.unpack("L", packed_msg_size)[0]
+                    # rewind stream
+                    img_stream.seek(0)
 
-                # recieve frame data
-                while(len(self.data) < msg_size):
-                    buf = await reader.read(buffer_size)
-                    print("phase 2", len(buf))
+                    # convert to cv2 frame
+                    data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
+                    frame = cv2.imdecode(data, 1)
 
-                    if len(buf) == 0:
-                        skip = True
-                        break
-                    self.data += buf
+                    startTime = datetime.now()
 
-                # no frame data then skip
-                if skip:
-                    print("skipped 2")
-                    continue
+                    # trigger on frame event
+                    self.call_on_frame(frame)
+            else:
+                package_size = struct.calcsize('L')
+                data = b''
 
-                frame_data = self.data[:msg_size]
-                self.data = self.data[msg_size:]
+                while (datetime.now() - startTime).total_seconds() < 0.2:
+                    buf = []
+                    skip = False
+                    while(len(data) < package_size):
+                        buf = conn.recv(buffer_size)
+                        if len(buf) == 0:
+                            skip = True
+                            break
+                        data += buf
 
-                frame = pickle.loads(frame_data)
-                startTime = datetime.now()
-                self.lastFrame = frame
-                self.call_on_frame(frame, writer)
+                    # if no frame data then skip
+                    if skip:
+                        continue
+                    packed_msg_size = data[:package_size]
 
-        print("Peer disconnected", peername)
-        cv2.destroyAllWindows()
+                    # unpack data
+                    data = data[package_size:]
+                    msg_size = struct.unpack("L", packed_msg_size)[0]
 
-    def call_on_frame(self, frame, writer: asyncio.StreamWriter):
+                    # recieve frame data
+                    while(len(data) < msg_size):
+                        buf = conn.recv(buffer_size)
+
+                        if len(buf) == 0:
+                            skip = True
+                            break
+                        data += buf
+
+                    # no frame data then skip
+                    if skip:
+                        continue
+
+                    frame_data = data[:msg_size]
+                    data = data[msg_size:]
+
+                    frame = pickle.loads(frame_data)
+                    
+                    startTime = datetime.now()
+
+                    self.call_on_frame(frame)
+
+            cv2.destroyAllWindows()
+
+    def call_on_frame(self, frame):
         self.frameNum += 1
-        print('recieved %dx%d image' % (frame.shape[1], frame.shape[0]))
-        arr = []
+        self.lastFrame = frame
+        print("recieved frame", frame.size)
+
         for f in self.on_frame_array:
-            arr.append(f(frame, writer))
-        asyncio.gather(*arr)
+            f(frame)
 
     def on_frame(self):
         def decorator(f):
@@ -179,52 +186,56 @@ class AsyncClient:
     def __init__(self, host, port, usePiCam=False):
         self.host = host
         self.port = port
-        #self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         self.on_msg_functions = []
         self.usePiCam = usePiCam
 
     async def connect(self):
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         print("starting stream client...")
+
+        self.socket.connect((self.host, self.port))
+
         if self.usePiCam:
             print("stream client will use picamera")
+
         await self.client_handler()
 
     async def client_handler(self):
         if self.usePiCam:
-            #cam = picam()
-            c = PiCamera()
-            c.resolution = (640, 480)
-            c.framerate = 25
+            cam = PiCamera()
+            cam.resolution(640, 480)
+            cam.framerate = 23
+
+            # get file-like object connection
+            conn = self.socket.makefile('rb')
+
+            # get stream to store img
             stream = io.BytesIO()
 
-            # make file-like object out of connection
-            self.writer.get_extra_info('socket').makefile('w')
+            # read capture stream
+            for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
+                # send image length
+                conn.write(struct.pack('<L', stream.tell()))
+                conn.flush()
 
-            for img in c.capture_continuous(stream, 'jpeg'):
-                # write the lenght of the img
-                self.writer.write(struct.pack('<L', stream.tell()))
-                await self.writer.drain()
+                # rewind stream and send image data
+                stream.seek(0)
+                conn.write(stream.read())
 
                 # reset stream
                 stream.seek(0)
-                self.writer.write(stream.read())
-
-                # full reset stream
-                stream.seek(0)
                 stream.truncate()
+
         else:
             while True:
                 frame = self.get_frame()
-                await self.send_frame(frame)
+                
+                data = pickle.dumps(frame)
+                self.socket.sendall(struct.pack("L", len(data)) + data)
         
         print("client handler stopped")
-
-    async def send_frame(self, frame):
-        data = pickle.dumps(frame)
-        self.writer.write(struct.pack("L", len(data)) + data)
-        await self.writer.drain()
-        print('sended %dx%d image' % (frame.shape[1], frame.shape[0]))
 
     def close(self):
         self.writer.close()

@@ -37,7 +37,7 @@ for opt, arg in opts:
         saveTrainingData = True
 
 
-#cv2.namedWindow('frame')
+cv2.namedWindow('frame')
 cv2.startWindowThread()
 
 server = AsyncServer(ip, port, usePiCam)
@@ -45,12 +45,12 @@ server = AsyncServer(ip, port, usePiCam)
 comms = comms.AsyncServer(ip, port + 1)
 
 @server.on_frame()
-async def frame_handler(frame, writer):
+def frame_handler(frame):
     lanes = linedetection.detect_lane(frame)
     steer = linedetection.stabilize_steering_angle(linedetection.compute_steering_angle(
         frame, lanes), linedetection.lastSteerAngle, len(lanes))
 
-    await comms.send_msg(json.dumps({"angle": steer}))
+    #await comms.send_msg(json.dumps({"angle": steer}))
 
     if saveTrainingData:
         path = "images/%05d_%03d.png" % (server.frameNum, steer)
