@@ -214,7 +214,7 @@ class AsyncClient:
             cam.framerate = 23
 
             # get file-like object connection
-            conn = self.socket.makefile('rb')
+            conn = self.socket.makefile('wb')
 
             # get stream to store img
             stream = io.BytesIO()
