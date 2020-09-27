@@ -74,17 +74,43 @@ class AsyncServer:
         self.usePiCam = usePiCam
 
     async def serve(self):
-        #self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
-        
+        # self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
+
         print("starting stream server...")
         self.socket.bind((self.host, self.port))
 
         if self.usePiCam:
             self.socket.makefile('rb')
             print("stream server expects to recieve picam images")
-        
+
         self.socket.listen(0)
         await self.server_handler()
+
+    def loop(conn):
+        conn = conn.makefile('rb')
+        package_size = struct.calcsize('<L')
+
+        while (datetime.now() - startTime).total_seconds() < 0.2:
+            img_len = struct.unpack('<L', conn.read(package_size))[0]
+
+            # disconnect when img length is 0
+            if not img_len:
+                break
+
+            # img stream to store img
+            img_stream = io.BytesIO()
+            img_stream.write(conn.read(img_len))
+
+            # rewind stream
+            img_stream.seek(0)
+
+            # convert to cv2 frame
+            data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
+            frame = cv2.imdecode(data, 1)
+
+            startTime = datetime.now()
+
+            self.frame = frame
 
     async def server_handler(self):
         while True:
@@ -97,31 +123,11 @@ class AsyncServer:
             self.frameNum = 0
 
             if self.usePiCam:
-                conn = conn.makefile('rb')
-                package_size = struct.calcsize('<L')
+                t = threading.Thread(target=self.loop, args=(conn))
+                t.start()
 
-                while (datetime.now() - startTime).total_seconds() < 0.2:
-                    img_len = struct.unpack('<L', conn.read(package_size))[0]
-                    
-                    # disconnect when img length is 0
-                    if not img_len:
-                        break
-
-                    # img stream to store img
-                    img_stream = io.BytesIO()
-                    img_stream.write(conn.read(img_len))
-
-                    # rewind stream
-                    img_stream.seek(0)
-
-                    # convert to cv2 frame
-                    data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
-                    frame = cv2.imdecode(data, 1)
-
-                    startTime = datetime.now()
-
-                    # trigger on frame event
-                    self.call_on_frame(frame)
+                while True:
+                    self.call_on_frame(self.frame)
             else:
                 package_size = struct.calcsize('L')
                 data = b''
@@ -162,7 +168,7 @@ class AsyncServer:
                     data = data[msg_size:]
 
                     frame = pickle.loads(frame_data)
-                    
+
                     startTime = datetime.now()
 
                     self.call_on_frame(frame)
@@ -192,7 +198,6 @@ class AsyncClient:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if usePiCam:
             self.socket = socket.socket()
-
 
         self.on_msg_functions = []
         self.usePiCam = usePiCam
@@ -236,10 +241,10 @@ class AsyncClient:
         else:
             while True:
                 frame = self.get_frame()
-                
+
                 data = pickle.dumps(frame)
                 self.socket.sendall(struct.pack("L", len(data)) + data)
-        
+
         print("client handler stopped")
 
     def close(self):
