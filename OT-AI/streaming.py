@@ -73,6 +73,8 @@ class AsyncServer:
 
         self.usePiCam = usePiCam
 
+        self.frame = []
+
     async def serve(self):
         # self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
 
@@ -86,9 +88,11 @@ class AsyncServer:
         self.socket.listen(0)
         await self.server_handler()
 
-    def loop(conn):
+    def loop(self, conn):
         conn = conn.makefile('rb')
         package_size = struct.calcsize('<L')
+
+        startTime = datetime.now()
 
         while (datetime.now() - startTime).total_seconds() < 0.2:
             img_len = struct.unpack('<L', conn.read(package_size))[0]
@@ -128,6 +132,7 @@ class AsyncServer:
 
                 while True:
                     self.call_on_frame(self.frame)
+                    await asyncio.sleep(0.05)
             else:
                 package_size = struct.calcsize('L')
                 data = b''

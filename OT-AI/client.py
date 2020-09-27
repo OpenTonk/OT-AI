@@ -31,8 +31,8 @@ for opt, arg in opts:
     elif opt == '--usepicam':
         usePiCam = True
 
-
-cap = cv2.VideoCapture(-1)
+if not usePiCam:
+    cap = cv2.VideoCapture(0)
 
 client = AsyncClient(ip, port, usePiCam)
 
