@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 from datetime import datetime
 import threading
+import io
 
 try:
     from picamera.array import PiRGBArray
@@ -58,7 +59,7 @@ class Server():
 
 
 class AsyncServer:
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, usePiCam=False):
         self.host = host
         self.port = port
         self.on_frame_array = []
@@ -67,6 +68,8 @@ class AsyncServer:
         self.data = b''
         self.lastFrame = None
         self.frameNum = 0
+
+        self.usePiCam = usePiCam
 
     async def serve(self):
         self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
@@ -82,49 +85,76 @@ class AsyncServer:
         
         self.frameNum = 0
 
-        while (datetime.now() - startTime).total_seconds() < 0.2:
-            buf = []
-            skip = False
-            while(len(self.data) < self.package_size):
-                print("phase 1", len(buf))
-                buf = await reader.read(buffer_size)
-                if len(buf) == 0:
-                    skip = True
-                    break
-                self.data += buf
+        if self.usePiCam:
+            self.sock.sockets[0].makefile('rb')
 
-            # if no frame data then skip
-            if skip:
-                print("skipped 1")
-                continue
-            packed_msg_size = self.data[:self.package_size]
+            while (datetime.now() - startTime).total_seconds() < 0.2:
+                # get length of image
+                img_len = struct.unpack('<L', await reader.read(self.package_size))[0]
+                if not img_len:
+                    continue
 
-            # unpack data
-            self.data = self.data[self.package_size:]
-            msg_size = struct.unpack("L", packed_msg_size)[0]
+                # stream to hold image data
+                img_stream = io.BytesIO()
+                img_stream.write(await reader.read(img_len))
 
-            # recieve frame data
-            while(len(self.data) < msg_size):
-                buf = await reader.read(buffer_size)
-                print("phase 2", len(buf))
+                # reset stream
+                img_stream.seek(0)
 
-                if len(buf) == 0:
-                    skip = True
-                    break
-                self.data += buf
+                # get frame data
+                data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
+                # decode data
+                frame = cv2.imdecode(data, 1)
 
-            # no frame data then skip
-            if skip:
-                print("skipped 2")
-                continue
+                startTime = datetime.now()
+                self.lastFrame = frame
+                self.call_on_frame(frame, writer)
 
-            frame_data = self.data[:msg_size]
-            self.data = self.data[msg_size:]
 
-            frame = pickle.loads(frame_data)
-            startTime = datetime.now()
-            self.lastFrame = frame
-            self.call_on_frame(frame, writer)
+        else:
+            while (datetime.now() - startTime).total_seconds() < 0.2:
+                buf = []
+                skip = False
+                while(len(self.data) < self.package_size):
+                    print("phase 1", len(buf))
+                    buf = await reader.read(buffer_size)
+                    if len(buf) == 0:
+                        skip = True
+                        break
+                    self.data += buf
+
+                # if no frame data then skip
+                if skip:
+                    print("skipped 1")
+                    continue
+                packed_msg_size = self.data[:self.package_size]
+
+                # unpack data
+                self.data = self.data[self.package_size:]
+                msg_size = struct.unpack("L", packed_msg_size)[0]
+
+                # recieve frame data
+                while(len(self.data) < msg_size):
+                    buf = await reader.read(buffer_size)
+                    print("phase 2", len(buf))
+
+                    if len(buf) == 0:
+                        skip = True
+                        break
+                    self.data += buf
+
+                # no frame data then skip
+                if skip:
+                    print("skipped 2")
+                    continue
+
+                frame_data = self.data[:msg_size]
+                self.data = self.data[msg_size:]
+
+                frame = pickle.loads(frame_data)
+                startTime = datetime.now()
+                self.lastFrame = frame
+                self.call_on_frame(frame, writer)
 
         print("Peer disconnected", peername)
         cv2.destroyAllWindows()
@@ -148,7 +178,7 @@ class AsyncClient:
     def __init__(self, host, port, usePiCam=False):
         self.host = host
         self.port = port
-        self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.on_msg_functions = []
         self.usePiCam = usePiCam
 
@@ -161,15 +191,31 @@ class AsyncClient:
 
     async def client_handler(self):
         if self.usePiCam:
-            cam = picam()
+            #cam = picam()
+            c = PiCamera()
+            c.resolution = (640, 480)
+            c.framerate = 25
+            stream = io.BytesIO()
 
-        while True:
-            if self.usePiCam:
-                frame = cam.read()
-                await asyncio.sleep(0.04)
-            else:
+            # make file-like object out of connection
+            self.writer.get_extra_info('socket').makefile('wb')
+
+            for img in c.capture_continuous(stream, 'jpeg'):
+                # write the lenght of the img
+                self.writer.write(struct.pack('<L', stream.tell()))
+                await self.writer.drain()
+
+                # reset stream
+                stream.seek(0)
+                self.writer.write(stream.read())
+
+                # full reset stream
+                stream.seek(0)
+                stream.truncate()
+        else:
+            while True:
                 frame = self.get_frame()
-            await self.send_frame(frame)
+                await self.send_frame(frame)
         
         print("client handler stopped")
 
@@ -214,6 +260,7 @@ class picam:
         while True:
             raw.truncate(0)
             self.isNew = False
+            raw.seek(0)
             c.capture(raw, format="bgr", use_video_port=True)
             self.frame = raw.array
             self.isNew = True
