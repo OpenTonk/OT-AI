@@ -220,7 +220,7 @@ class AsyncClient:
             stream = io.BytesIO()
 
             # read capture stream
-            for img in cam.capture_continuous(stream, 'rgb', use_video_port=True):
+            for img in cam.capture_continuous(stream, 'png', use_video_port=True):
                 # send image length
                 conn.write(struct.pack('<L', stream.tell()))
                 conn.flush()
