@@ -27,7 +27,6 @@ try:
         image_stream.write(connection.read(image_len))
         # Rewind the stream, open it as an image with PIL and do some
         # processing on it
-
         # get frame data
         data = np.fromstring(image_stream.getvalue(), dtype=np.uint8)
         # decode data
