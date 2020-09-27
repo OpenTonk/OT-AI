@@ -74,11 +74,15 @@ class AsyncServer:
     async def serve(self):
         self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
         print("starting stream server...")
+        if self.usePiCam:
+            print("stream server expects to recieve picam images")
         await self.sock.serve_forever()
 
     async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         peername = writer.get_extra_info('peername')
         print("Stream connected", peername)
+
+        s = writer.get_extra_info('socket')
 
         startTime = datetime.now()
         dt = datetime.now() - startTime
@@ -86,7 +90,7 @@ class AsyncServer:
         self.frameNum = 0
 
         if self.usePiCam:
-            self.sock.sockets[0].makefile('rb')
+            #s.makefile("rb")
 
             while (datetime.now() - startTime).total_seconds() < 0.2:
                 # get length of image
@@ -109,8 +113,6 @@ class AsyncServer:
                 startTime = datetime.now()
                 self.lastFrame = frame
                 self.call_on_frame(frame, writer)
-
-
         else:
             while (datetime.now() - startTime).total_seconds() < 0.2:
                 buf = []
@@ -198,7 +200,7 @@ class AsyncClient:
             stream = io.BytesIO()
 
             # make file-like object out of connection
-            self.writer.get_extra_info('socket').makefile('wb')
+            self.writer.get_extra_info('socket').makefile('w')
 
             for img in c.capture_continuous(stream, 'jpeg'):
                 # write the lenght of the img
