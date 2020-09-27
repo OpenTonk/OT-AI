@@ -210,7 +210,7 @@ class AsyncClient:
     async def client_handler(self):
         if self.usePiCam:
             cam = PiCamera()
-            cam.resolution = (640, 480)
+            cam.resolution = (320, 240)
             cam.framerate = 23
 
             # get file-like object connection
@@ -220,7 +220,7 @@ class AsyncClient:
             stream = io.BytesIO()
 
             # read capture stream
-            for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
+            for img in cam.capture_continuous(stream, 'rgb', use_video_port=True):
                 # send image length
                 conn.write(struct.pack('<L', stream.tell()))
                 conn.flush()
