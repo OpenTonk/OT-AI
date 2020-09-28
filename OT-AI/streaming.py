@@ -88,34 +88,6 @@ class AsyncServer:
         self.socket.listen(0)
         await self.server_handler()
 
-    def loop(self, conn):
-        conn = conn.makefile('rb')
-        package_size = struct.calcsize('<L')
-
-        startTime = datetime.now()
-
-        while (datetime.now() - startTime).total_seconds() < 0.2:
-            img_len = struct.unpack('<L', conn.read(package_size))[0]
-
-            # disconnect when img length is 0
-            if not img_len:
-                break
-
-            # img stream to store img
-            img_stream = io.BytesIO()
-            img_stream.write(conn.read(img_len))
-
-            # rewind stream
-            img_stream.seek(0)
-
-            # convert to cv2 frame
-            data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
-            frame = cv2.imdecode(data, 1)
-
-            startTime = datetime.now()
-
-            self.frame = frame
-
     async def server_handler(self):
         while True:
             conn, info = self.socket.accept()
@@ -127,11 +99,15 @@ class AsyncServer:
             self.frameNum = 0
 
             if self.usePiCam:
-                t = threading.Thread(target=self.loop, args=(conn))
-                t.start()
+                p = Pipeline()
 
+                t = threading.Thread(target=loop, args=(conn, p))
+                t.start()
+                
+                await asyncio.sleep(2)
+                
                 while True:
-                    self.call_on_frame(self.frame)
+                    self.call_on_frame(p.get_var())
                     await asyncio.sleep(0.05)
             else:
                 package_size = struct.calcsize('L')
@@ -230,7 +206,7 @@ class AsyncClient:
             stream = io.BytesIO()
 
             # read capture stream
-            for img in cam.capture_continuous(stream, 'png', use_video_port=True):
+            for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
                 # send image length
                 conn.write(struct.pack('<L', stream.tell()))
                 conn.flush()
@@ -265,29 +241,46 @@ class AsyncClient:
         return decorator
 
 
-class picam:
+def loop(conn, pipe):
+    conn = conn.makefile('rb')
+    package_size = struct.calcsize('<L')
+
+    while True:
+        img_len = struct.unpack('<L', conn.read(package_size))[0]
+
+        # disconnect when img length is 0
+        if not img_len:
+            break
+
+        # img stream to store img
+        img_stream = io.BytesIO()
+        img_stream.write(conn.read(img_len))
+
+        # rewind stream
+        img_stream.seek(0)
+
+        # convert to cv2 frame
+        data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
+        frame = cv2.imdecode(data, 1)
+
+        pipe.set_var(frame)
+        print("frame updated", frame.size)
+
+
+class Pipeline:
     def __init__(self):
-        self.frame = []
-        self.isNew = False
+        self.v = []
+        self.producer_lock = threading.Lock()
+        self.consumer_lock = threading.Lock()
+        #self.consumer_lock.acquire()
 
-        self.thread = threading.Thread(target=self.loop)
-        self.thread.start()
+    def get_var(self):
+        #self.consumer_lock.acquire()
+        v = self.v
+        self.producer_lock.release()
+        return v
 
-    def read(self):
-        while len(self.frame) == 0:
-            pass
-        return self.frame
-
-    def loop(self):
-        c = PiCamera()
-        c.resolution = (640, 480)
-        c.framerate = 25
-        raw = PiRGBArray(c)
-
-        while True:
-            raw.truncate(0)
-            self.isNew = False
-            raw.seek(0)
-            c.capture(raw, format="bgr", use_video_port=True)
-            self.frame = raw.array
-            self.isNew = True
+    def set_var(self, v):
+        self.producer_lock.acquire()
+        self.v = v
+        #self.consumer_lock.release()
