@@ -62,7 +62,9 @@ class AsyncServer:
     def __init__(self, host: str, port: int, usePiCam=False):
         self.host = host
         self.port = port
+
         self.on_frame_array = []
+        self.on_disconnect_array = []
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if usePiCam:
@@ -103,12 +105,12 @@ class AsyncServer:
 
                 t = threading.Thread(target=cam.loop)
                 t.start()
-                
+
                 await asyncio.sleep(2)
-                
-                while True:
+
+                while t.is_alive():
                     self.call_on_frame(cam.frame)
-                    #await asyncio.sleep(0.05)
+                    # await asyncio.sleep(0.05)
             else:
                 package_size = struct.calcsize('L')
                 data = b''
@@ -154,19 +156,30 @@ class AsyncServer:
 
                     self.call_on_frame(frame)
 
+            print("Stream client disconnected", conn.getpeername())
             cv2.destroyAllWindows()
+            self.call_on_disconnect()
 
     def call_on_frame(self, frame):
         self.frameNum += 1
         self.lastFrame = frame
-        print("recieved frame", frame.size)
 
         for f in self.on_frame_array:
             f(frame)
 
+    def call_on_disconnect(self):
+        for f in self.on_disconnect_array:
+            f()
+
     def on_frame(self):
         def decorator(f):
             self.on_frame_array.append(f)
+            return f
+        return decorator
+
+    def on_disconnect(self):
+        def decorator(f):
+            self.on_disconnect_array.append(f)
             return f
         return decorator
 
@@ -196,7 +209,7 @@ class AsyncClient:
     async def client_handler(self):
         if self.usePiCam:
             cam = PiCamera()
-            cam.resolution = (640, 480)
+            cam.resolution = (480, 360)
             cam.framerate = 23
 
             # get file-like object connection
@@ -206,19 +219,24 @@ class AsyncClient:
             stream = io.BytesIO()
 
             # read capture stream
-            for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
-                # send image length
-                conn.write(struct.pack('<L', stream.tell()))
+            try:
+                for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
+                    # send image length
+                    conn.write(struct.pack('<L', stream.tell()))
+                    conn.flush()
+
+                    # rewind stream and send image data
+                    stream.seek(0)
+                    conn.write(stream.read())
+
+                    # reset stream
+                    stream.seek(0)
+                    stream.truncate()
+            finally:
+                conn.write(struct.pack('<L', 0))
                 conn.flush()
-
-                # rewind stream and send image data
-                stream.seek(0)
-                conn.write(stream.read())
-
-                # reset stream
-                stream.seek(0)
-                stream.truncate()
-
+                conn.close()
+                self.socket.close()
         else:
             while True:
                 frame = self.get_frame()
@@ -248,25 +266,28 @@ class PiCameraThread:
 
     def loop(self):
         package_size = struct.calcsize('<L')
+        img_stream = io.BytesIO()
 
-        while True:
-            img_len = struct.unpack('<L', self.conn.read(package_size))[0]
+        try:
+            while True:
+                img_len = struct.unpack('<L', self.conn.read(package_size))[0]
 
-            # disconnect when img length is 0
-            if not img_len:
-                break
+                # disconnect when img length is 0
+                if not img_len:
+                    break
 
-            # img stream to store img
-            img_stream = io.BytesIO()
-            img_stream.write(self.conn.read(img_len))
+                # img stream to store img
+                img_stream.write(self.conn.read(img_len))
 
-            # rewind stream
-            img_stream.seek(0)
+                # rewind stream
+                img_stream.seek(0)
 
-            # convert to cv2 frame
-            data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
-            self.frame = cv2.imdecode(data, 1)
-
-            print("frame updated", self.frame.size)
-        
-        return 0
+                # convert to cv2 frame
+                data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
+                self.frame = cv2.imdecode(data, 1)
+                
+                # reset stream
+                img_stream.seek(0)
+                img_stream.truncate()
+        finally:
+            return 0

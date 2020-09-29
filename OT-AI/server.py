@@ -65,6 +65,11 @@ def frame_handler(frame):
     cv2.waitKey(1)
 
 
+@server.on_disconnect()
+def on_disconnect():
+    comms.stop()
+
+
 @comms.on_msg()
 async def on_msg(msg):
     print(msg)

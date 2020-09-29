@@ -11,7 +11,6 @@ port = 8084
 usePiCam = False
 size = 1
 
-
 try:
     opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", ["ip=", "port=", "size=", "usepicam"])
 except getopt.GetoptError:

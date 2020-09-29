@@ -15,6 +15,8 @@ class AsyncServer:
         self.package_size = struct.calcsize('L')
         self.data = b''
 
+        self.disconnect = False
+
     async def serve(self):
         self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
         print("starting comms server...")
@@ -31,7 +33,7 @@ class AsyncServer:
 
         self.writer = writer
 
-        while True:
+        while not self.disconnect:
             buf = []
             skip = False
             while(len(self.data) < self.package_size):
@@ -69,6 +71,7 @@ class AsyncServer:
             self.call_on_msg(msg)
 
         print("Peer disconnected", peername)
+        self.disconnect = False
 
     def call_on_msg(self, msg):
         arr = []
@@ -82,12 +85,15 @@ class AsyncServer:
             return f
         return decorator
 
+    def stop(self):
+        self.disconnect = True
 
 
 class AsyncClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.on_msg_listeners = []
 
