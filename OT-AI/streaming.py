@@ -110,7 +110,7 @@ class AsyncServer:
                 
                 while True:
                     l.acquire()
-                    self.call_on_frame(p.get_var())
+                    self.call_on_frame(cam.frame)
                     l.release()
                     await asyncio.sleep(0.05)
             else:
