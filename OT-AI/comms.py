@@ -15,23 +15,23 @@ class AsyncServer:
         self.package_size = struct.calcsize('L')
         self.data = b''
 
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         self.disconnect = False
 
     async def serve(self):
-        self.sock = await asyncio.start_server(self.server_handler, self.host, self.port)
+        self.socket.bind((self.host, self.port))
         print("starting comms server...")
-        await self.sock.serve_forever()
+        self.socket.listen(0)
+        await self.server_handler()
 
     async def send_msg(self, msg):
         data = pickle.dumps(msg)
-        self.writer.write(struct.pack("L", len(data)) + data)
-        await self.writer.drain()
+        self.socket.sendall(struct.pack("L", len(data)) + data)
 
-    async def server_handler(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    async def server_handler(self):
         peername = writer.get_extra_info('peername')
         print("Peer connected", peername)
-
-        self.writer = writer
 
         while not self.disconnect:
             buf = []
@@ -93,29 +93,28 @@ class AsyncClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        
-        self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.on_msg_listeners = []
 
         self.package_size = struct.calcsize('L')
         self.data = b''
 
     async def connect(self):
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+        self.socket.connect((self.host, self.port))
         print("starting comms client...")
         await self.client_handler()
 
-    async def send_msg(self, msg):
+    def send_msg(self, msg):
         data = pickle.dumps(msg)
-        self.writer.write(struct.pack("L", len(data)) + data)
-        await self.writer.drain()
+        self.socket.sendall(struct.pack("L", len(data)) + data)
 
     async def client_handler(self):
         while True:
             buf = []
             skip = False
             while(len(self.data) < self.package_size):
-                buf = await self.reader.read(buffer_size)
+                buf = self.socket.recv(buffer_size)
                 if len(buf) == 0:
                     skip = True
                     break
@@ -132,7 +131,7 @@ class AsyncClient:
 
             # recieve frame data
             while(len(self.data) < msg_size):
-                buf = await self.reader.read(buffer_size)
+                buf = self.socket.recv(buffer_size)
                 if len(buf) == 0:
                     skip = True
                     break

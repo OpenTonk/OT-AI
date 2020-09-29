@@ -17,7 +17,6 @@ def detect_edges(frame):
     # detect edges
     edges = cv2.Canny(mask, 200, 400)
 
-
     return edges
 
 def region_of_interest(edges):
