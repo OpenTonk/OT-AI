@@ -101,18 +101,14 @@ class AsyncServer:
             if self.usePiCam:
                 cam = PiCameraThread(conn)
 
-                l = threading.Lock()
-
                 t = threading.Thread(target=cam.loop)
                 t.start()
                 
                 await asyncio.sleep(2)
                 
                 while True:
-                    l.acquire()
                     self.call_on_frame(cam.frame)
-                    l.release()
-                    await asyncio.sleep(0.05)
+                    #await asyncio.sleep(0.05)
             else:
                 package_size = struct.calcsize('L')
                 data = b''
