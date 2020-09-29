@@ -99,15 +99,19 @@ class AsyncServer:
             self.frameNum = 0
 
             if self.usePiCam:
-                p = Pipeline()
+                cam = PiCameraThread(conn)
 
-                t = threading.Thread(target=loop, args=(conn, p))
+                l = threading.Lock()
+
+                t = threading.Thread(target=cam.loop)
                 t.start()
                 
                 await asyncio.sleep(2)
                 
                 while True:
+                    l.acquire()
                     self.call_on_frame(p.get_var())
+                    l.release()
                     await asyncio.sleep(0.05)
             else:
                 package_size = struct.calcsize('L')
@@ -241,46 +245,32 @@ class AsyncClient:
         return decorator
 
 
-def loop(conn, pipe):
-    conn = conn.makefile('rb')
-    package_size = struct.calcsize('<L')
+class PiCameraThread:
+    def __init__(self, conn):
+        self.frame = []
+        self.conn = conn.makefile('rb')
 
-    while True:
-        img_len = struct.unpack('<L', conn.read(package_size))[0]
+    def loop(self):
+        package_size = struct.calcsize('<L')
 
-        # disconnect when img length is 0
-        if not img_len:
-            break
+        while True:
+            img_len = struct.unpack('<L', self.conn.read(package_size))[0]
 
-        # img stream to store img
-        img_stream = io.BytesIO()
-        img_stream.write(conn.read(img_len))
+            # disconnect when img length is 0
+            if not img_len:
+                break
 
-        # rewind stream
-        img_stream.seek(0)
+            # img stream to store img
+            img_stream = io.BytesIO()
+            img_stream.write(self.conn.read(img_len))
 
-        # convert to cv2 frame
-        data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
-        frame = cv2.imdecode(data, 1)
+            # rewind stream
+            img_stream.seek(0)
 
-        pipe.set_var(frame)
-        print("frame updated", frame.size)
+            # convert to cv2 frame
+            data = np.fromstring(img_stream.getvalue(), dtype=np.uint8)
+            self.frame = cv2.imdecode(data, 1)
 
-
-class Pipeline:
-    def __init__(self):
-        self.v = []
-        self.producer_lock = threading.Lock()
-        self.consumer_lock = threading.Lock()
-        #self.consumer_lock.acquire()
-
-    def get_var(self):
-        #self.consumer_lock.acquire()
-        v = self.v
-        self.producer_lock.release()
-        return v
-
-    def set_var(self, v):
-        self.producer_lock.acquire()
-        self.v = v
-        #self.consumer_lock.release()
+            print("frame updated", self.frame.size)
+        
+        return 0
