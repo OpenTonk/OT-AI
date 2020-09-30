@@ -220,7 +220,8 @@ class AsyncClient:
 
             # read capture stream
             try:
-                for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
+                cam.start_recording(conn, format='mjpeg')
+                """for img in cam.capture_continuous(stream, 'jpeg', use_video_port=True):
                     # send image length
                     conn.write(struct.pack('<L', stream.tell()))
                     conn.flush()
@@ -231,12 +232,13 @@ class AsyncClient:
 
                     # reset stream
                     stream.seek(0)
-                    stream.truncate()
+                    stream.truncate()"""
             finally:
                 conn.write(struct.pack('<L', 0))
                 conn.flush()
                 conn.close()
                 self.socket.close()
+                cam.stop_recording()
         else:
             while True:
                 frame = self.get_frame()
