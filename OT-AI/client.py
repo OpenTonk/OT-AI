@@ -49,7 +49,7 @@ def read_frame():
 
 @comms.on_msg()
 async def on_msg(msg):
-    print(msg)
+    print(msg.angle)
 
 
 def comms_thread():

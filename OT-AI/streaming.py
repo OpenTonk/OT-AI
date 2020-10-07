@@ -172,7 +172,7 @@ class AsyncClient:
     async def client_handler(self):
         if self.usePiCam:
             cam = PiCamera()
-            cam.resolution = (480, 360)
+            cam.resolution = (360, 270)
             cam.framerate = 23
 
             # get file-like object connection

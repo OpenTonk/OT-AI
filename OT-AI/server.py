@@ -8,7 +8,8 @@ import json
 import comms
 import threading
 
-import sys, getopt
+import sys
+import getopt
 
 
 ip = "127.0.0.1"
@@ -18,7 +19,8 @@ saveTrainingData = False
 
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", ["ip=", "port=", "size=", "usepicam"])
+    opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", [
+                               "ip=", "port=", "size=", "usepicam"])
 except getopt.GetoptError:
     print("ERROR: server.py -a <server ip> -p <port> -s <size> (--usepicam)")
     exit()
@@ -44,13 +46,16 @@ server = AsyncServer(ip, port, usePiCam)
 
 comms = comms.AsyncServer(ip, port + 1)
 
+tc = None
+
+
 @server.on_frame()
 def frame_handler(frame):
     lanes = linedetection.detect_lane(frame)
     steer = linedetection.stabilize_steering_angle(linedetection.compute_steering_angle(
         frame, lanes), linedetection.lastSteerAngle, len(lanes))
 
-    comms.send_msg({"angle": steer})
+    comms.send_msg({"angle": int(steer)})
 
     if saveTrainingData:
         path = "images/%05d_%03d.png" % (server.frameNum, steer)
