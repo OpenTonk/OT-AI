@@ -25,12 +25,13 @@ class AsyncServer:
         self.socket.listen(1)
         await self.server_handler()
 
-    async def send_msg(self, msg):
+    def send_msg(self, msg):
         data = pickle.dumps(msg)
-        self.socket.sendall(struct.pack("L", len(data)) + data)
+        self.socket.send(bytes(f"{len(msg):<{10}}", 'utf-8') + data)
 
     async def server_handler(self):
         conn, addr = self.socket.accept()
+        self.conn = conn
         print("Peer connected", addr)
 
         while not self.disconnect:
@@ -98,7 +99,6 @@ class AsyncClient:
         self.on_msg_listeners = []
 
         self.package_size = struct.calcsize('L')
-        self.data = b''
 
     async def connect(self):
         self.socket.connect((self.host, self.port))
@@ -107,43 +107,25 @@ class AsyncClient:
 
     def send_msg(self, msg):
         data = pickle.dumps(msg)
-        self.socket.sendall(struct.pack("L", len(data)) + data)
+        self.socket.send(bytes(f"{len(msg):<{10}}", 'utf-8') + data)
 
     async def client_handler(self):
+        full_msg = b''
+        new_msg = True
+
         while True:
-            buf = []
-            skip = False
-            while(len(self.data) < self.package_size):
-                buf = self.socket.recv(buffer_size)
-                if len(buf) == 0:
-                    skip = True
-                    break
-                self.data += buf
+            msg = self.socket.recv(16)
+            if new_msg:
+                msglen = int(msg[:10])
+                new_msg = False
 
-            # if no frame data then skip
-            if skip:
-                continue
-            packed_msg_size = self.data[:self.package_size]
+            full_msg += msg
 
-            # unpack data
-            self.data = self.data[self.package_size:]
-            msg_size = struct.unpack("L", packed_msg_size)[0]
-
-            # recieve frame data
-            while(len(self.data) < msg_size):
-                buf = self.socket.recv(buffer_size)
-                if len(buf) == 0:
-                    skip = True
-                    break
-                self.data += buf
-
-            # no frame data then skip
-            if skip:
-                continue
-
-            msg = self.data[:msg_size]
-            self.data = self.data[msg_size:]
-            self.call_on_msg(pickle.loads(msg))
+            if len(full_msg) - 10 == msglen:
+                recv = pickle.loads(full_msg[10:])
+                self.call_on_msg(recv)
+                new_msg = True
+                full_msg = b''
 
     def close(self):
         self.writer.close()
