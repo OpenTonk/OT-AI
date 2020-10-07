@@ -114,7 +114,7 @@ class AsyncClient:
         new_msg = True
 
         while True:
-            msg = self.socket.recv(16)
+            msg = self.socket.recv(buffer_size)
             if new_msg:
                 msglen = int(msg[:10])
                 new_msg = False
