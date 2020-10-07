@@ -22,7 +22,7 @@ class AsyncServer:
     async def serve(self):
         self.socket.bind((self.host, self.port))
         print("starting comms server...")
-        self.socket.listen(0)
+        self.socket.listen(1)
         await self.server_handler()
 
     async def send_msg(self, msg):
@@ -30,20 +30,20 @@ class AsyncServer:
         self.socket.sendall(struct.pack("L", len(data)) + data)
 
     async def server_handler(self):
-        peername = writer.get_extra_info('peername')
-        print("Peer connected", peername)
+        conn, addr = self.socket.accept()
+        print("Peer connected", addr)
 
         while not self.disconnect:
             buf = []
             skip = False
             while(len(self.data) < self.package_size):
-                buf = await reader.read(buffer_size)
+                buf = conn.recv(buffer_size)
                 if len(buf) == 0:
                     skip = True
                     break
                 self.data += buf
 
-            # if no frame data then skip
+            # if no data length then skip
             if skip:
                 continue
             packed_msg_size = self.data[:self.package_size]
@@ -52,15 +52,15 @@ class AsyncServer:
             self.data = self.data[self.package_size:]
             msg_size = struct.unpack("L", packed_msg_size)[0]
 
-            # recieve frame data
+            # recieve data to unpack
             while(len(self.data) < msg_size):
-                buf = await reader.read(buffer_size)
+                buf = conn.recv(buffer_size)
                 if len(buf) == 0:
                     skip = True
                     break
                 self.data += buf
 
-            # no frame data then skip
+            # no data then skip
             if skip:
                 continue
 
@@ -70,7 +70,7 @@ class AsyncServer:
             msg = pickle.loads(msg_data)
             self.call_on_msg(msg)
 
-        print("Peer disconnected", peername)
+        print("Peer disconnected", addr)
         self.disconnect = False
 
     def call_on_msg(self, msg):
