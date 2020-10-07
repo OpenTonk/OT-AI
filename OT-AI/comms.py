@@ -27,7 +27,7 @@ class AsyncServer:
 
     def send_msg(self, msg):
         data = pickle.dumps(msg)
-        self.socket.send(bytes(f"{len(msg):<{10}}", 'utf-8') + data)
+        self.conn.send(bytes(f"{len(data):<{10}}", 'utf-8') + data)
 
     async def server_handler(self):
         conn, addr = self.socket.accept()
@@ -107,7 +107,7 @@ class AsyncClient:
 
     def send_msg(self, msg):
         data = pickle.dumps(msg)
-        self.socket.send(bytes(f"{len(msg):<{10}}", 'utf-8') + data)
+        self.socket.send(bytes(f"{len(data):<{10}}", 'utf-8') + data)
 
     async def client_handler(self):
         full_msg = b''
@@ -125,7 +125,7 @@ class AsyncClient:
                 recv = pickle.loads(full_msg[10:])
                 self.call_on_msg(recv)
                 new_msg = True
-                full_msg = b''
+                full_msg = b""
 
     def close(self):
         self.writer.close()
