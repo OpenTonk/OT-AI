@@ -45,6 +45,8 @@ class TankControl:
     def setRightSpeed(self, speed: int):
         self.rightSpeed = speed
 
+        print("right", speed)
+
         if speed > 0:
             self.right[0].ChangeDutyCycle(speed)
             self.right[1].ChangeDutyCycle(0)
@@ -57,6 +59,8 @@ class TankControl:
 
     def setLeftSpeed(self, speed: int):
         self.leftSpeed = speed
+
+        print("left", speed)
 
         if speed > 0:
             self.left[0].ChangeDutyCycle(speed)
