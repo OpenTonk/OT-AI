@@ -26,6 +26,7 @@ class AsyncServer:
         await self.server_handler()
 
     def send_msg(self, msg):
+        print("sending")
         data = pickle.dumps(msg)
         self.conn.send(bytes(f"{len(data):<{10}}", 'utf-8') + data)
 
@@ -69,16 +70,16 @@ class AsyncServer:
             self.data = self.data[msg_size:]
 
             msg = pickle.loads(msg_data)
-            self.call_on_msg(msg)
+            await self.call_on_msg(msg)
 
         print("Peer disconnected", addr)
         self.disconnect = False
 
-    def call_on_msg(self, msg):
-        arr = []
+    async def call_on_msg(self, msg):
+        # arr = []
         for f in self.on_msg_listeners:
-            arr.append(f(msg))
-        asyncio.gather(*arr)
+            await f(msg)
+        # asyncio.gather(*arr)
 
     def on_msg(self):
         def decorator(f):
@@ -123,18 +124,18 @@ class AsyncClient:
 
             if len(full_msg) - 10 == msglen:
                 recv = pickle.loads(full_msg[10:])
-                self.call_on_msg(recv)
+                await self.call_on_msg(recv)
                 new_msg = True
                 full_msg = b""
 
     def close(self):
         self.writer.close()
 
-    def call_on_msg(self, msg):
-        arr = []
+    async def call_on_msg(self, msg):
+        # arr = []
         for f in self.on_msg_listeners:
-            arr.append(f(msg))
-        asyncio.gather(*arr)
+            await f(msg)
+        # asyncio.gather(*arr)
 
     def on_msg(self):
         def decorator(f):
