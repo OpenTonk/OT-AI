@@ -3,7 +3,8 @@ import asyncio
 from streaming import AsyncClient
 import comms
 import threading
-import sys, getopt
+import sys
+import getopt
 import tankcontrol
 
 
@@ -14,7 +15,8 @@ size = 1
 controller = tankcontrol.TankControl((11, 12), (15, 16))
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", ["ip=", "port=", "size=", "usepicam"])
+    opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", [
+                               "ip=", "port=", "size=", "usepicam"])
 except getopt.GetoptError:
     print("ERROR: client.py -a <server ip> -p <port> -s <size> (--usepicam)")
     exit()
@@ -39,6 +41,7 @@ client = AsyncClient(ip, port, usePiCam)
 
 comms = comms.AsyncClient(ip, port + 1)
 
+
 @client.on_get_frame()
 def read_frame():
     ret, frame = cap.read()
@@ -52,7 +55,8 @@ def read_frame():
 @comms.on_msg()
 async def on_msg(msg):
     print(msg)
-    controller.drive(msg.speed, msg.angle)
+    if "speed" in msg and "angle" in msg:
+        controller.drive(msg.speed, msg.angle)
 
 
 def comms_thread():

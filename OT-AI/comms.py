@@ -34,7 +34,7 @@ class AsyncServer:
             new_msg = True
 
             while True:
-                msg = self.socket.recv(buffer_size)
+                msg = conn.recv(buffer_size)
                 if new_msg:
                     msglen = int(msg[:10])
                     new_msg = False
