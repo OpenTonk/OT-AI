@@ -35,7 +35,7 @@ class TankControl:
             return
 
         if angle < 90:
-            self.setLeftSpeed((1 - (angle / 90)) * speed)
+            self.setLeftSpeed((angle / 90) * speed)
             self.setRightSpeed(speed)
             return
 
