@@ -254,6 +254,6 @@ class PiCameraThread:
                 # reset stream
                 img_stream.seek(0)
                 img_stream.truncate()
-                print((datetime.now() - start).total_seconds())
+                # print((datetime.now() - start).total_seconds())
         finally:
             return 0

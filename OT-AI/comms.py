@@ -1,9 +1,7 @@
 import socket
-import asyncio
-import struct
 import pickle
 
-buffer_size = 4096
+buffer_size = 16
 
 
 class AsyncServer:
@@ -11,9 +9,6 @@ class AsyncServer:
         self.host = host
         self.port = port
         self.on_msg_listeners = []
-
-        self.package_size = struct.calcsize('L')
-        self.data = b''
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -26,7 +21,6 @@ class AsyncServer:
         await self.server_handler()
 
     def send_msg(self, msg):
-        print("sending")
         data = pickle.dumps(msg)
         self.conn.send(bytes(f"{len(data):<{10}}", 'utf-8') + data)
 
@@ -36,41 +30,22 @@ class AsyncServer:
         print("Peer connected", addr)
 
         while not self.disconnect:
-            buf = []
-            skip = False
-            while(len(self.data) < self.package_size):
-                buf = conn.recv(buffer_size)
-                if len(buf) == 0:
-                    skip = True
-                    break
-                self.data += buf
+            full_msg = b''
+            new_msg = True
 
-            # if no data length then skip
-            if skip:
-                continue
-            packed_msg_size = self.data[:self.package_size]
+            while True:
+                msg = self.socket.recv(buffer_size)
+                if new_msg:
+                    msglen = int(msg[:10])
+                    new_msg = False
 
-            # unpack data
-            self.data = self.data[self.package_size:]
-            msg_size = struct.unpack("L", packed_msg_size)[0]
+                full_msg += msg
 
-            # recieve data to unpack
-            while(len(self.data) < msg_size):
-                buf = conn.recv(buffer_size)
-                if len(buf) == 0:
-                    skip = True
-                    break
-                self.data += buf
-
-            # no data then skip
-            if skip:
-                continue
-
-            msg_data = self.data[:msg_size]
-            self.data = self.data[msg_size:]
-
-            msg = pickle.loads(msg_data)
-            await self.call_on_msg(msg)
+                if len(full_msg) - 10 == msglen:
+                    recv = pickle.loads(full_msg[10:])
+                    await self.call_on_msg(recv)
+                    new_msg = True
+                    full_msg = b""
 
         print("Peer disconnected", addr)
         self.disconnect = False
@@ -98,8 +73,6 @@ class AsyncClient:
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.on_msg_listeners = []
-
-        self.package_size = struct.calcsize('L')
 
     async def connect(self):
         self.socket.connect((self.host, self.port))

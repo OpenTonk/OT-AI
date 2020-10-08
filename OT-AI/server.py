@@ -55,7 +55,7 @@ def frame_handler(frame):
     steer = linedetection.stabilize_steering_angle(linedetection.compute_steering_angle(
         frame, lanes), linedetection.lastSteerAngle, len(lanes))
 
-    comms.send_msg({"angle": int(steer)})
+    comms.send_msg({"angle": int(steer), "speed": 50})
 
     if saveTrainingData:
         path = "images/%05d_%03d.png" % (server.frameNum, steer)
