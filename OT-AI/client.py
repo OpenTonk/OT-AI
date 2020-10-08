@@ -56,7 +56,7 @@ def read_frame():
 async def on_msg(msg):
     print(msg)
     if "speed" in msg and "angle" in msg:
-        controller.drive(msg.speed, msg.angle)
+        controller.drive(msg["speed"], msg["angle"])
 
 
 def comms_thread():
