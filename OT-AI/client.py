@@ -4,12 +4,14 @@ from streaming import AsyncClient
 import comms
 import threading
 import sys, getopt
+import tankcontrol
 
 
 ip = "127.0.0.1"
 port = 8084
 usePiCam = False
 size = 1
+controller = tankcontrol.TankControl((11, 12), (15, 16))
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", ["ip=", "port=", "size=", "usepicam"])
@@ -50,6 +52,7 @@ def read_frame():
 @comms.on_msg()
 async def on_msg(msg):
     print(msg)
+    controller.drive(msg.speed, msg.angle)
 
 
 def comms_thread():
