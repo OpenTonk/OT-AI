@@ -6,10 +6,10 @@ IO.setmode(IO.BCM)
 
 class TankControl:
     def __init__(self, right: tuple, left: tuple):
-        IO.setup(right[0], IO.IN)
-        IO.setup(right[1], IO.IN)
-        IO.setup(left[0], IO.IN)
-        IO.setup(left[1], IO.IN)
+        IO.setup(right[0], IO.OUT)
+        IO.setup(right[1], IO.OUT)
+        IO.setup(left[0], IO.OUT)
+        IO.setup(left[1], IO.OUT)
 
         self.right = (
             IO.PWM(right[0], 100),
