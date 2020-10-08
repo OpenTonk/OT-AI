@@ -55,7 +55,7 @@ class TankControl:
             self.right[1].ChangeDutyCycle(0)
         else:
             self.right[0].ChangeDutyCycle(0)
-            self.right[1].ChangeDutyCycle(speed)
+            self.right[1].ChangeDutyCycle(abs(speed))
 
     def setLeftSpeed(self, speed: int):
         self.leftSpeed = speed
@@ -70,4 +70,4 @@ class TankControl:
             self.left[1].ChangeDutyCycle(0)
         else:
             self.left[0].ChangeDutyCycle(0)
-            self.left[1].ChangeDutyCycle(speed)
+            self.left[1].ChangeDutyCycle(abs(speed))
