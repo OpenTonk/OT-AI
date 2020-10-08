@@ -1,7 +1,8 @@
 import RPi.GPIO as IO
 
-IO.setwarning(False)
+IO.setwarnings(False)
 IO.setmode(IO.BCM)
+
 
 class TankControl:
     def __init__(self, right: tuple, left: tuple):
@@ -9,13 +10,13 @@ class TankControl:
         IO.setup(right[1], IO.IN)
         IO.setup(left[0], IO.IN)
         IO.setup(left[1], IO.IN)
-        
+
         self.right = (
-            IO.PWM(right[0], 100), 
+            IO.PWM(right[0], 100),
             IO.PWM(right[1], 100)
         )
         self.left = (
-            IO.PWM(left[0], 100), 
+            IO.PWM(left[0], 100),
             IO.PWM(left[1], 100)
         )
 
