@@ -1,11 +1,11 @@
 # pseudocode client
-start tankcontroller
-start comms client in a thread.
-start streaming client.
+1. start tankcontroller
+2. start comms client in a thread.
+3. start streaming client.
 
 ## on get frame
-if usepicam then get frame from picamerathread.
-else get frame from on_get_frame event.
+1. if usepicam then get frame from picamerathread.
+2. else get frame from on_get_frame event.
 
 ## on message
 set tankcontroller drive speed and steer angle.
