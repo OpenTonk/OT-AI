@@ -48,6 +48,7 @@ class AsyncServer:
                     full_msg = b""
 
         print("Peer disconnected", addr)
+        conn.close()
         self.disconnect = False
 
     async def call_on_msg(self, msg):
@@ -102,7 +103,7 @@ class AsyncClient:
                 full_msg = b""
 
     def close(self):
-        self.writer.close()
+        self.socket.close()
 
     async def call_on_msg(self, msg):
         # arr = []
