@@ -13,6 +13,7 @@ port = 8084
 usePiCam = False
 size = 1
 controller = tankcontrol.TankControl((11, 12), (15, 16))
+disableMotor = False
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", [
@@ -33,6 +34,8 @@ for opt, arg in opts:
         size = int(arg)
     elif opt == '--usepicam':
         usePiCam = True
+    elif opt == '--disable-motor':
+        disableMotor = True
 
 if not usePiCam:
     cap = cv2.VideoCapture(0)
@@ -55,7 +58,7 @@ def read_frame():
 @comms.on_msg()
 async def on_msg(msg):
     print(msg)
-    if "speed" in msg and "angle" in msg:
+    if "speed" in msg and "angle" in msg and not disableMotor:
         controller.drive(msg["speed"], msg["angle"])
 
 
