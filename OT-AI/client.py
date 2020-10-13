@@ -34,7 +34,7 @@ for opt, arg in opts:
         size = int(arg)
     elif opt == '--usepicam':
         usePiCam = True
-    elif opt == '--disable-motor':
+    elif opt == '--disablemotor':
         disableMotor = True
 
 if not usePiCam:
