@@ -51,8 +51,8 @@ def detect_line_segments(cropped_edges):
 def average_slope_intercept(frame, line_segments):
     """
     This function combines line segments into one or two lane lines
-    If all line slopes are < 0: then we only have detected left lane
-    If all line slopes are > 0: then we only have detected right lane
+    If all line slopes (rc) are < 0: then we only have detected left lane
+    If all line slopes (rc) are > 0: then we only have detected right lane
     """
     lane_lines = []
     if line_segments is None:
