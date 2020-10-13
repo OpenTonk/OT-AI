@@ -17,7 +17,7 @@ disableMotor = False
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "ha:p:s:", [
-                               "ip=", "port=", "size=", "usepicam"])
+                               "ip=", "port=", "size=", "usepicam", "disablemotor"])
 except getopt.GetoptError:
     print("ERROR: client.py -a <server ip> -p <port> -s <size> (--usepicam)")
     exit()
