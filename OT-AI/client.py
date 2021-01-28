@@ -1,4 +1,3 @@
-import cv2
 import asyncio
 from streaming import AsyncClient
 import comms
@@ -38,6 +37,7 @@ for opt, arg in opts:
         disableMotor = True
 
 if not usePiCam:
+    import cv2
     cap = cv2.VideoCapture(0)
 
 client = AsyncClient(ip, port, usePiCam)
@@ -70,4 +70,9 @@ def comms_thread():
 t = threading.Thread(target=comms_thread)
 t.start()
 
-asyncio.run(client.connect())
+try:
+    asyncio.run(client.connect())
+finally:
+    comms.close()
+    client.close()
+    controller.stop()

@@ -13,6 +13,7 @@ class AsyncServer:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.disconnect = False
+        self.i = 0
 
     async def serve(self):
         self.socket.bind((self.host, self.port))
@@ -21,8 +22,11 @@ class AsyncServer:
         await self.server_handler()
 
     def send_msg(self, msg):
-        data = pickle.dumps(msg)
-        self.conn.send(bytes(f"{len(data):<{10}}", 'utf-8') + data)
+        self.i += 1
+        if True:
+            data = pickle.dumps(msg)
+            self.conn.send(bytes(f"{len(data):<{10}}", 'utf-8') + data)
+            self.i = 0
 
     async def server_handler(self):
         conn, addr = self.socket.accept()

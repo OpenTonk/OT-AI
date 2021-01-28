@@ -2,20 +2,24 @@ import cv2
 import numpy as np
 import math
 
-lower_blue = np.array([0, 230, 153])
-upper_blue = np.array([204, 255, 238])
+lower_blue = np.array([6, 199, 50])
+upper_blue = np.array([156, 252, 180])
 lastSteerAngle = 0
+camera_mid_offset_percent = -0.03
 
 def detect_edges(frame):
     # filter for blue lane lines
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    #hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
+    #mask = hsv
     #mask = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('hsv', hsv)
     cv2.imshow('mask', mask)
 
     # detect edges
     edges = cv2.Canny(mask, 200, 400)
+    #edges = cv2.Canny(mask, 50, 150, apertureSize=3)
 
     return edges
 
@@ -116,7 +120,7 @@ def compute_steering_angle(frame, lane_lines):
     else:
         _, _, left_x2, _ = lane_lines[0][0]
         _, _, right_x2, _ = lane_lines[1][0]
-        camera_mid_offset_percent = 0.0 # 0.0 means car pointing to center, -0.03: car is centered to left, +0.03 means car pointing to right
+         # 0.0 means car pointing to center, -0.03: car is centered to left, +0.03 means car pointing to right
         mid = int(width / 2 * (1 + camera_mid_offset_percent))
         x_offset = (left_x2 + right_x2) / 2 - mid
 
@@ -153,9 +157,11 @@ def stabilize_steering_angle(curr_steering_angle, new_steering_angle, num_of_lan
     return stabilized_steering_angle
 
 def detect_lane(frame):
-    
+    cv2.imshow("input", frame)
     edges = detect_edges(frame)
     cropped_edges = region_of_interest(edges)
+    if np.mean(cropped_edges) == 0:
+        return []
     line_segments = detect_line_segments(cropped_edges)
     lane_lines = average_slope_intercept(frame, line_segments)
     

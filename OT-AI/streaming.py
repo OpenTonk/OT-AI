@@ -173,7 +173,7 @@ class AsyncClient:
         if self.usePiCam:
             cam = PiCamera()
             cam.resolution = (360, 270)
-            cam.framerate = 23
+            cam.framerate = 24
 
             # get file-like object connection
             conn = self.socket.makefile('wb')

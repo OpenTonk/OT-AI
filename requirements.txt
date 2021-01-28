@@ -1,3 +1,7 @@
 opencv-python
-picamera
-picamera[array]
+matplotlib
+tensorflow
+keras
+pandas
+sklearn
+imgaug
