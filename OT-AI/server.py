@@ -92,7 +92,7 @@ def on_val(val):
 
 ## blue electric tape
 cv2.createTrackbar("lower H", "frame", 60, 255, on_val)
-cv2.createTrackbar("lower S", "frame", 200, 255, on_val)
+cv2.createTrackbar("lower S", "frame", 180, 255, on_val)
 cv2.createTrackbar("lower V", "frame", 50, 255, on_val)
 
 cv2.createTrackbar("upper H", "frame", 180, 255, on_val)
@@ -100,7 +100,7 @@ cv2.createTrackbar("upper S", "frame", 255, 255, on_val)
 cv2.createTrackbar("upper V", "frame", 110, 255, on_val)
 
 cv2.createTrackbar("offset", "frame", 10, 20, on_val)
-cv2.createTrackbar("speed", "frame", 0, 100, on_val)
+cv2.createTrackbar("speed", "frame", 15, 100, on_val)
 
 
 def get_lower():
@@ -120,6 +120,7 @@ def get_upper():
 @videoServer.on_frame()
 def frame_handler(frame):
     global record, out
+    frameToSave = frame
 
     if useML:
         steer = compute_steering_angle(frame)
@@ -141,17 +142,19 @@ def frame_handler(frame):
         frame = linedetection.display_lines(frame, lanes)
         frame = linedetection.display_heading_line(frame, steer)
 
-        if saveTrainingData:
-            path = "images/%05d_%03d.png" % (videoServer.frameNum, steer)
-            print(path)
-            result = cv2.imwrite(path, frame)
-            print(result)
+        
 
         if len(lanes) == 0:
             instructionServer.send_msg({"angle": 90, "speed": 0})
         else:
             instructionServer.send_msg({"angle": int((190 / 180) * steer),
                             "speed": cv2.getTrackbarPos("speed", "frame")})
+            
+            if saveTrainingData and cv2.getTrackbarPos("speed", "frame") > 0:
+                path = "images/%05d_%03d.png" % (videoServer.frameNum, steer)
+                print(path)
+                result = cv2.imwrite(path, frameToSave)
+                print(result)
 
     if record:
         out.write(frame)

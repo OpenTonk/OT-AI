@@ -57,7 +57,7 @@ def read_frame():
 
 @comms.on_msg()
 async def on_msg(msg):
-    print(msg)
+    #print(msg)
     if "speed" in msg and "angle" in msg and not disableMotor:
         controller.drive(msg["speed"], msg["angle"])
 
