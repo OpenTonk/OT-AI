@@ -47,7 +47,9 @@ class AsyncServer:
                     finally:
                         msglen = 0
                         new_msg = False
-                        continue
+                
+                if not new_msg: 
+                    continue
 
                 full_msg += msg
 
