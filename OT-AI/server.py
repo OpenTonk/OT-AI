@@ -174,7 +174,12 @@ async def on_msg(msg):
 
 
 def comms_thread():
-    asyncio.run(instructionServer.serve())
+    try:
+        asyncio.run(instructionServer.serve())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        instructionServer.stop()
 
 
 # start comms client on separate thread

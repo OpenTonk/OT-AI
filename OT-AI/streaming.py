@@ -47,7 +47,10 @@ class AsyncServer:
             print("stream server expects to recieve picam images")
 
         self.socket.listen(0)
-        await self.server_handler()
+        try:
+            await self.server_handler()
+        except KeyboardInterrupt:
+            pass
 
     async def server_handler(self):
         while True:
@@ -167,7 +170,10 @@ class AsyncClient:
         if self.usePiCam:
             print("stream client will use picamera")
 
-        await self.client_handler()
+        try:
+            await self.client_handler()
+        except KeyboardInterrupt:
+            pass
 
     async def client_handler(self):
         if self.usePiCam:
