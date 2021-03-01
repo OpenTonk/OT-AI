@@ -91,16 +91,16 @@ def on_val(val):
 #cv2.createTrackbar("upper V", "frame", 255, 255, on_val)
 
 ## blue electric tape
-cv2.createTrackbar("lower H", "frame", 60, 255, on_val)
-cv2.createTrackbar("lower S", "frame", 180, 255, on_val)
-cv2.createTrackbar("lower V", "frame", 50, 255, on_val)
+cv2.createTrackbar("lower H", "frame", 80, 255, on_val)
+cv2.createTrackbar("lower S", "frame", 255, 255, on_val)
+cv2.createTrackbar("lower V", "frame", 80, 255, on_val)
 
-cv2.createTrackbar("upper H", "frame", 180, 255, on_val)
+cv2.createTrackbar("upper H", "frame", 150, 255, on_val)
 cv2.createTrackbar("upper S", "frame", 255, 255, on_val)
-cv2.createTrackbar("upper V", "frame", 110, 255, on_val)
+cv2.createTrackbar("upper V", "frame", 150, 255, on_val)
 
 cv2.createTrackbar("offset", "frame", 10, 20, on_val)
-cv2.createTrackbar("speed", "frame", 15, 100, on_val)
+cv2.createTrackbar("speed", "frame", 0, 100, on_val)
 
 
 def get_lower():
@@ -147,7 +147,7 @@ def frame_handler(frame):
         if len(lanes) == 0:
             instructionServer.send_msg({"angle": 90, "speed": 0})
         else:
-            instructionServer.send_msg({"angle": int((190 / 180) * steer),
+            instructionServer.send_msg({"angle": steer,
                             "speed": cv2.getTrackbarPos("speed", "frame")})
             
             if saveTrainingData and cv2.getTrackbarPos("speed", "frame") > 0:
@@ -183,6 +183,8 @@ t.start()
 
 try:
     asyncio.run(videoServer.serve())
+except KeyboardInterrupt:
+    pass
 finally:
     videoServer.socket.close()
     instructionServer.socket.close()

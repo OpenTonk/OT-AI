@@ -66,7 +66,7 @@ def average_slope_intercept(frame, line_segments):
     left_fit = []
     right_fit = []
 
-    boundary = 1/3
+    boundary = 1/2
     left_region_boundary = width * (1 - boundary)  # left lane line segment should be on left 2/3 of the screen
     right_region_boundary = width * boundary # right lane line segment should be on left 2/3 of the screen
 

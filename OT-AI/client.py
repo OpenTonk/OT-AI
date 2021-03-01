@@ -72,6 +72,8 @@ t.start()
 
 try:
     asyncio.run(client.connect())
+except KeyboardInterrupt:
+    pass
 finally:
     comms.close()
     client.close()

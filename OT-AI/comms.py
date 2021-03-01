@@ -40,8 +40,14 @@ class AsyncServer:
             while True:
                 msg = conn.recv(buffer_size)
                 if new_msg:
-                    msglen = int(msg[:10])
-                    new_msg = False
+                    try:
+                        msglen = int(msg[:10])
+                    except ValueError:
+                        pass
+                    finally:
+                        msglen = 0
+                        new_msg = False
+                        continue
 
                 full_msg += msg
 
